@@ -7,6 +7,7 @@
 ########
 data/temp_data/*
 data/predictions
+data/bucc2017/*
 dictionaries/
 !dictionaries/.gitkeep
 
