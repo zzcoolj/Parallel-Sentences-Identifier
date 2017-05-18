@@ -6,14 +6,16 @@
 # Data #
 ########
 data/temp_data/*
-!data/temp_data/source_target_and_potential_targets_accurate_mode
-!data/temp_data/translated_target_file_accurate_mode_information.csv
+dictionaries/
+!dictionaries/.gitkeep
 
 # Unrelated files #
 ###################
 code/__pycache__/
 bucc2016-zhen-sample2/
 zh-en_early_phase/
+solr-6.4.2/
+submission/
 
 # Packages #
 ############
