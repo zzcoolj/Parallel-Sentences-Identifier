@@ -298,7 +298,7 @@ class CandidateParallelSentencePairsClassifier(object):
 
     @staticmethod
     def evaluation(folder_path,
-                   n_splits_num=10,
+                   n_splits_num=5,
                    show_detail=True):
         print('\n------------------- Evaluation ---------------------')
         # Read data ----------------------------------------------------------------------------------------------------
@@ -335,13 +335,13 @@ class CandidateParallelSentencePairsClassifier(object):
                 print('y_train-----------------------\n', np.asarray((unique_train, counts_train)).T)
                 print('positive:negative => 1 :', counts_train[0] / counts_train[1])
                 unique_test, counts_test = np.unique(y_test, return_counts=True)
-                print('y_test-----------------------\n', np.asarray((unique_test, counts_test)).T)
+                print('y_test------------------------\n', np.asarray((unique_test, counts_test)).T)
                 print('positive:negative => 1 :', counts_test[0] / counts_test[1])
 
             # http://scikit-learn.org/stable/auto_examples/svm/plot_separating_hyperplane_unbalanced.html
             classifier = svm.SVC(kernel='rbf',
                                  class_weight=ast.literal_eval(config['svm_parameters']['class_weight']),
-                                 C=config['svm_parameters']['C'],
+                                 C=float(config['svm_parameters']['C']),
                                  gamma=config['svm_parameters']['gamma'])
             classifier.fit(X_train, y_train)
             pred = classifier.predict(X_test)
@@ -362,7 +362,7 @@ class CandidateParallelSentencePairsClassifier(object):
             sum_recall += recall_score_temp
             if show_detail:
                 unique_pred, counts_pred = np.unique(pred, return_counts=True)
-                print('pred-----------------------\n', np.asarray((unique_pred, counts_pred)).T)
+                print('pred--------------------------\n', np.asarray((unique_pred, counts_pred)).T)
                 if len(counts_pred) == 2:
                     print('positive:negative => 1 :', counts_pred[0] / counts_pred[1], '\n')
 
@@ -465,3 +465,5 @@ class CandidateParallelSentencePairsClassifier(object):
         for index, predicted_label in enumerate(pred):
             if predicted_label == 1:
                 final_result.write(test_training_set[index][1] + '\t' + test_training_set[index][0] + '\n')
+
+CandidateParallelSentencePairsClassifier.evaluation(folder_path='../data/temp_data/classifier/training/')

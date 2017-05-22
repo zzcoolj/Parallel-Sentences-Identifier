@@ -24,8 +24,9 @@ class CandidateParallelSentencePairsFinder(object):
             'http://localhost:8983/solr/gettingstarted/'
             'update?stream.body=<delete><query>*:*</query></delete>&commit=true')
         # Load data into Solr server
+        index_file_absolute_path = os.getcwd().replace('code', index_file_path.replace('../', ''))
         os.system('cd /Users/zzcoolj/Code/bucc2017/solr-6.4.2/;'
-                  'bin/post -c gettingstarted ' + index_file_path)
+                  'bin/post -c gettingstarted ' + index_file_absolute_path)
         self.english_remove_stopwords = english_remove_stopwords
         self.english_stem = english_stem
         if english_remove_stopwords:
@@ -106,10 +107,10 @@ class CandidateParallelSentencePairsFinder(object):
             exit()
             return ['test']
 
-    def search_corpus(self, source_file_path, output_path,
+    def search_corpus(self, searching_file_path, output_path,
                       gold_standard_file_path=None, only_search_gold_standard=False):
         source_target_and_potential_targets = dict()
-        source_dict = common.read_two_columns_file_to_build_dictionary_type_specified(source_file_path, str, str)
+        source_dict = common.read_two_columns_file_to_build_dictionary_type_specified(searching_file_path, str, str)
 
         counter = 0
         if gold_standard_file_path is not None:
@@ -117,6 +118,7 @@ class CandidateParallelSentencePairsFinder(object):
             with open(gold_standard_file_path) as f:
                 for line in f:
                     (target_id, source_id) = line.rstrip('\n').split("\t")
+                    # TODO NOW searching_file is source file?
                     source_sentence = source_dict[source_id]
                     searching_sentence = self.__pre_process_sentence(source_sentence)
                     target_potential_targets_ids = self.__search_potential_target_sentences(searching_sentence,
