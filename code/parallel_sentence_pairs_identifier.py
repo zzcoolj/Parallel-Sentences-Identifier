@@ -137,7 +137,13 @@ class ParallelSentencePairsIdentifier(object):
             test_output_folder_path_prefix=config['output_files_for_test_data']['features_labels']
         )
 
+# Whole system test
 ParallelSentencePairsIdentifier.all()
 ParallelSentencePairsIdentifier.result_analysis(
     predictions_path=config['output_files_for_test_data']['predictions'],
     gold_standard_path='../data/bucc2017/test_data/zh-en.test.gold')
+
+# # Training run 2
+# ParallelSentencePairsIdentifier.result_analysis(
+#     predictions_path='../data/predictions_config2',
+#     gold_standard_path='../data/bucc2017/training_data/zh-en.training.gold')

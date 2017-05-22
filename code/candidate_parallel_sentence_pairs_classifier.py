@@ -466,4 +466,5 @@ class CandidateParallelSentencePairsClassifier(object):
             if predicted_label == 1:
                 final_result.write(test_training_set[index][1] + '\t' + test_training_set[index][0] + '\n')
 
-CandidateParallelSentencePairsClassifier.evaluation(folder_path='../data/temp_data/classifier/training/')
+# # For test
+# CandidateParallelSentencePairsClassifier.evaluation(folder_path='../data/temp_data/classifier/training/')

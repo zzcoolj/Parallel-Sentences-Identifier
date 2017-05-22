@@ -339,10 +339,21 @@ class CandidateParallelSentencePairsFinder(object):
                   "rm -rf example/cloud/")
 
 
-# # Test
+# # Corpus searching test
 # cpspf = CandidateParallelSentencePairsFinder(index_file_path='/Users/zzcoolj/Code/bucc2017/data/temp_data/'
 #                                                              'translated_target_file_test_full_mode_for_solr.csv')
 # cpspf.search_corpus(source_file_path='/Users/zzcoolj/Code/bucc2017/data/bucc2017/training_data/zh-en.training.en',
 #                     gold_standard_file_path='/Users/zzcoolj/Code/bucc2017/data/bucc2017/'
 #                                             'training_data/zh-en.training.gold',
 #                     only_search_gold_standard=True)
+
+# # Second configuration: Replacing the classifier (Step 3) with a base- line ranking method based on the Solr score:
+#         # we select the M sentences pairs with the highest scores,
+#         # where M is determined according to the prior probability of being a correct sentence pair,
+#         # estimated on the training data.
+# CandidateParallelSentencePairsFinder.get_results_by_score(
+#     source_target_and_potential_targets_path='../data/temp_data/source_target_and_potential_targets_training',
+#     pred_path='../data/predictions_config2',
+#     results_size=1899,
+#     potential_targets_size=1
+# )
