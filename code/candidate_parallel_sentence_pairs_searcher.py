@@ -347,13 +347,13 @@ class CandidateParallelSentencePairsFinder(object):
 #                                             'training_data/zh-en.training.gold',
 #                     only_search_gold_standard=True)
 
-# # Second configuration: Replacing the classifier (Step 3) with a base- line ranking method based on the Solr score:
-#         # we select the M sentences pairs with the highest scores,
-#         # where M is determined according to the prior probability of being a correct sentence pair,
-#         # estimated on the training data.
-# CandidateParallelSentencePairsFinder.get_results_by_score(
-#     source_target_and_potential_targets_path='../data/temp_data/source_target_and_potential_targets_training',
-#     pred_path='../data/predictions_config2',
-#     results_size=1899,
-#     potential_targets_size=1
-# )
+# Second configuration: Replacing the classifier (Step 3) with a base- line ranking method based on the Solr score:
+        # we select the M sentences pairs with the highest scores,
+        # where M is determined according to the prior probability of being a correct sentence pair,
+        # estimated on the training data.
+CandidateParallelSentencePairsFinder.get_results_by_score(
+    source_target_and_potential_targets_path='../data/temp_data/source_target_and_potential_targets_test',
+    pred_path='../data/predictions_config2_test_10000',
+    results_size=10000,
+    potential_targets_size=1
+)

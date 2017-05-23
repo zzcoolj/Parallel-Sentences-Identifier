@@ -1,7 +1,6 @@
 import chinese_corpus_translator
 import candidate_parallel_sentence_pairs_searcher
 import candidate_parallel_sentence_pairs_classifier
-import os
 import configparser
 
 config = configparser.ConfigParser()
@@ -77,27 +76,27 @@ class ParallelSentencePairsIdentifier(object):
 
     @staticmethod
     def all():
-        # # ------------------------------------- Translating ----------------------------------------------------------
-        # print('\033[94m[translating training target file]\033[0m')
-        # cct_train = chinese_corpus_translator.ChineseCorpusTranslator(
-        #     zh_en_dict_path=config['dictionary']['zh_en_dict_for_training_data'])
-        # cct_train.translate(
-        #     corpus_file_path=config['training_data']['zh'],
-        #     unknown_words_path=config['output_files_for_training_data']['unknown_words'],
-        #     translated_corpus_for_solr_path=config['output_files_for_training_data']['translated_corpus_for_solr_path'],
-        #     translated_corpus_for_selecter_path=
-        #     config['output_files_for_training_data']['translated_corpus_for_selecter_path'])
-        #
-        # print('\033[94m[translating test target file]\033[0m')
-        # cct_test = chinese_corpus_translator.ChineseCorpusTranslator(
-        #     zh_en_dict_path=config['dictionary']['zh_en_dict_for_test_data'])
-        # cct_test.translate(
-        #     corpus_file_path=config['test_data']['zh'],
-        #     unknown_words_path=config['output_files_for_test_data']['unknown_words'],
-        #     translated_corpus_for_solr_path=config['output_files_for_test_data']['translated_corpus_for_solr_path'],
-        #     translated_corpus_for_selecter_path=
-        #     config['output_files_for_test_data']['translated_corpus_for_selecter_path'])
-        #
+        # ------------------------------------- Translating ----------------------------------------------------------
+        print('\033[94m[translating training target file]\033[0m')
+        cct_train = chinese_corpus_translator.ChineseCorpusTranslator(
+            zh_en_dict_path=config['dictionary']['zh_en_dict_for_training_data'])
+        cct_train.translate(
+            corpus_file_path=config['training_data']['zh'],
+            unknown_words_path=config['output_files_for_training_data']['unknown_words'],
+            translated_corpus_for_solr_path=config['output_files_for_training_data']['translated_corpus_for_solr_path'],
+            translated_corpus_for_selecter_path=
+            config['output_files_for_training_data']['translated_corpus_for_selecter_path'])
+
+        print('\033[94m[translating test target file]\033[0m')
+        cct_test = chinese_corpus_translator.ChineseCorpusTranslator(
+            zh_en_dict_path=config['dictionary']['zh_en_dict_for_test_data'])
+        cct_test.translate(
+            corpus_file_path=config['test_data']['zh'],
+            unknown_words_path=config['output_files_for_test_data']['unknown_words'],
+            translated_corpus_for_solr_path=config['output_files_for_test_data']['translated_corpus_for_solr_path'],
+            translated_corpus_for_selecter_path=
+            config['output_files_for_test_data']['translated_corpus_for_selecter_path'])
+
         # ------------------------------------- Searching --------------------------------------------------------------
         print('\033[94m[Solr searching for training data]\033[0m')
         cpsps_train = candidate_parallel_sentence_pairs_searcher.CandidateParallelSentencePairsFinder(
@@ -137,13 +136,23 @@ class ParallelSentencePairsIdentifier(object):
             test_output_folder_path_prefix=config['output_files_for_test_data']['features_labels']
         )
 
-# Whole system test
-ParallelSentencePairsIdentifier.all()
+# Whole system test (Test run 1)
+# ParallelSentencePairsIdentifier.all()
 ParallelSentencePairsIdentifier.result_analysis(
     predictions_path=config['output_files_for_test_data']['predictions'],
     gold_standard_path='../data/bucc2017/test_data/zh-en.test.gold')
 
-# # Training run 2
+# # Test run 2
 # ParallelSentencePairsIdentifier.result_analysis(
-#     predictions_path='../data/predictions_config2',
-#     gold_standard_path='../data/bucc2017/training_data/zh-en.training.gold')
+#     predictions_path='../data/predictions_config2_test',
+#     gold_standard_path='../data/bucc2017/test_data/zh-en.test.gold')
+
+# # Test run 3
+# ParallelSentencePairsIdentifier.intersection(
+#     dict1_path='../data/predictions',
+#     dict2_path='../data/predictions_config2_test_10000',
+#     pred_path='../data/predictions_config3_test'
+# )
+# ParallelSentencePairsIdentifier.result_analysis(
+#     predictions_path='../data/predictions_config3_test',
+#     gold_standard_path='../data/bucc2017/test_data/zh-en.test.gold')

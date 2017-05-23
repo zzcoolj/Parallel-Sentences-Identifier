@@ -328,7 +328,7 @@ class Corpus(object):
         pl.show()
 
 
-# Test
+# # Sentence translation test
 # cct = ChineseCorpusTranslator()
 # sentence_translation, unknown_words = cct.chinese_sentence_translator.translate('輪狀病毒則通常是通過與被感染的兒童的直接接觸傳播。')
 # print(sentence_translation)
