@@ -358,10 +358,11 @@ class CandidateParallelSentencePairsFinder(object):
 #     potential_targets_size=1
 # )
 
-CandidateParallelSentencePairsFinder.evaluate_search_engine_result(
-    source_target_and_potential_targets_path='../data/temp_data/source_target_and_potential_targets_training_temp',
-    gold_standard_num=1899,
-    find_best_rows_score_combination_parameters_decided=True,
-    search_gold_standard=True,
-    search_source_file=False
-)
+# # Evaluate
+# CandidateParallelSentencePairsFinder.evaluate_search_engine_result(
+#     source_target_and_potential_targets_path='../data/temp_data/source_target_and_potential_targets_training',
+#     gold_standard_num=1899,
+#     find_best_rows_score_combination_parameters_decided=True,
+#     search_gold_standard=True,
+#     search_source_file=False
+# )

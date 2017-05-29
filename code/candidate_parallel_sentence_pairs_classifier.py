@@ -427,8 +427,8 @@ class CandidateParallelSentencePairsClassifier(object):
         The reason to keep them is just to use preprocessing_data function for both training data and test data.
         """
         print("[reading training features and labels]")
-        training_features_scaled_path = training_folder_path + 'training_features.pkl'
-        labels_array_path = training_folder_path + 'labels_array.pkl'
+        training_features_scaled_path = training_folder_path + 'features.pkl'
+        labels_array_path = training_folder_path + 'labels.pkl'
         pkl_file1 = open(training_features_scaled_path, 'rb')
         training_features_scaled = pickle.load(pkl_file1)
         pkl_file1.close()
@@ -454,7 +454,7 @@ class CandidateParallelSentencePairsClassifier(object):
             output_folder_path_prefix=test_output_folder_path_prefix,
             use_extra_positive_information=False,
             ten_percent_sampling=False)
-        joblib.dump(test_training_set, test_output_folder_path_prefix+'training_set.pkl')
+        joblib.dump(test_training_set, test_output_folder_path_prefix+'test_training_set.pkl')
 
         print('[SVM model predicting]')
         # classifier = joblib.load(config['output_files_for_training_data']['trained_classifier'])
