@@ -284,13 +284,13 @@ class CandidateParallelSentencePairsFinder(object):
 
             # Evaluate success on different rows
             success_rows_dict = dict()
-            for i in range(config['solr_parameters']['rows']):
+            for i in range(int(config['solr_parameters']['rows'])):
                 true_count, useless = get_how_many_gold_standard_left(0.0, i + 1)
                 # precision = "{0:.5f}%".format(true_count / gold_standard_num * 100)
                 precision = true_count / gold_standard_num * 100
                 success_rows_dict[str(i + 1)] = precision
-            common.write_dict_to_file(config['output_files']['precision_file_output_path'], success_rows_dict, 'str')
-            visual_diagnostics.plot_dict(config['output_files']['precision_file_output_path'])
+            common.write_dict_to_file(config['output_files_for_training_data']['success'], success_rows_dict, 'str')
+            visual_diagnostics.plot_dict(config['output_files_for_training_data']['success'])
 
             # Compare two Solr success rates
             # precision_accurate_mode_Stem_keepChineseStopWords_ccldc_processUnknownWords_keepASCII
@@ -347,13 +347,21 @@ class CandidateParallelSentencePairsFinder(object):
 #                                             'training_data/zh-en.training.gold',
 #                     only_search_gold_standard=True)
 
-# Second configuration: Replacing the classifier (Step 3) with a base- line ranking method based on the Solr score:
-        # we select the M sentences pairs with the highest scores,
-        # where M is determined according to the prior probability of being a correct sentence pair,
-        # estimated on the training data.
-CandidateParallelSentencePairsFinder.get_results_by_score(
-    source_target_and_potential_targets_path='../data/temp_data/source_target_and_potential_targets_test',
-    pred_path='../data/predictions_config2_test_10000',
-    results_size=10000,
-    potential_targets_size=1
+# # Second configuration: Replacing the classifier (Step 3) with a base- line ranking method based on the Solr score:
+#         # we select the M sentences pairs with the highest scores,
+#         # where M is determined according to the prior probability of being a correct sentence pair,
+#         # estimated on the training data.
+# CandidateParallelSentencePairsFinder.get_results_by_score(
+#     source_target_and_potential_targets_path='../data/temp_data/source_target_and_potential_targets_test',
+#     pred_path='../data/predictions_config2_test_10000',
+#     results_size=10000,
+#     potential_targets_size=1
+# )
+
+CandidateParallelSentencePairsFinder.evaluate_search_engine_result(
+    source_target_and_potential_targets_path='../data/temp_data/source_target_and_potential_targets_training_temp',
+    gold_standard_num=1899,
+    find_best_rows_score_combination_parameters_decided=True,
+    search_gold_standard=True,
+    search_source_file=False
 )
