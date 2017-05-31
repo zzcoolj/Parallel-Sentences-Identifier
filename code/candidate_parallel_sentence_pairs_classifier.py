@@ -19,6 +19,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVC
 from scipy.spatial.distance import cosine
 from sklearn.externals import joblib
+import pandas as pd
 import visual_diagnostics
 import configparser
 
@@ -391,8 +392,8 @@ class CandidateParallelSentencePairsClassifier(object):
     @staticmethod
     def find_best_c_gamma(folder_path):
         print("\033[94m[reading training features and labels]\033[0m")
-        training_features_scaled_path = folder_path + 'training_features.pkl'
-        labels_array_path = folder_path + 'labels_array.pkl'
+        training_features_scaled_path = folder_path + 'features.pkl'
+        labels_array_path = folder_path + 'labels.pkl'
 
         pkl_file1 = open(training_features_scaled_path, 'rb')
         training_features_scaled = pickle.load(pkl_file1)
@@ -402,14 +403,21 @@ class CandidateParallelSentencePairsClassifier(object):
         labels_array = pickle.load(pkl_file2)
         pkl_file2.close()
 
-        C_range = np.logspace(-2, 10, 13)
-        gamma_range = np.logspace(-9, 3, 13)
-        param_grid = dict(gamma=gamma_range, C=C_range)
-        cv = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=42)
-        grid = GridSearchCV(SVC(), param_grid=param_grid, cv=cv, n_jobs=6)
+        C_range = np.logspace(0, 10, 1)
+        gamma_range = np.logspace(-1, 3, 1)
+        class_weight_range = np.array([{1: 8}, {1: 9}])
+        param_grid = dict(gamma=gamma_range, C=C_range, class_weight=class_weight_range)
+        '''
+        Stratification is the process of rearranging the data as to ensure each fold is a good representative 
+        of the whole. For example in a binary classification problem where each class comprises 50% of the data, 
+        it is best to arrange the data such that in every fold, each class comprises around half the instances.
+        '''
+        cv = StratifiedShuffleSplit(n_splits=2, test_size=0.5, random_state=2)
+        grid = GridSearchCV(SVC(kernel='rbf'), param_grid=param_grid, cv=cv, n_jobs=1, scoring='f1')
         grid.fit(training_features_scaled, labels_array)
 
-        print("The best parameters are %s with a score of %0.2f"
+        print(pd.DataFrame(grid.cv_results_))
+        print("\nThe best parameters are %s with a score of %0.2f"
               % (grid.best_params_, grid.best_score_))
 
     # On the assumption that we already have training features and labels by using preprocessing_data function.
@@ -468,3 +476,6 @@ class CandidateParallelSentencePairsClassifier(object):
 
 # # For test
 # CandidateParallelSentencePairsClassifier.evaluation(folder_path='../data/temp_data/classifier/training/')
+
+CandidateParallelSentencePairsClassifier.find_best_c_gamma(
+    folder_path='../data/temp_data/classifier/training_temp/')
