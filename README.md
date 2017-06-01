@@ -20,7 +20,7 @@
             ├── test
             └── training
 ```
-test_data and training_data could be downloaded from [**BUCC 2017 Shared Task web page**](https://comparable.limsi.fr/bucc2017/bucc2017-task.html). As for the dictionaries, I use [**CC-CEDICT**](https://www.mdbg.net/chinese/dictionary?page=cedict) and the restricted data `Chinese-English Translation Lexicon Version 3.0 [LDC2002L27]` (Huang et al., 2002) to generate Chinese-English dictionaries (generating functions are provided in `ChineseEnglishDictionary` class in `chinese_corpus_translator.py`). You could generate your own dictionaries by using other resources and then configure the dictionaries path in `config.ini`.
+test_data and training_data could be downloaded from [**BUCC 2017 Shared Task web page**](https://comparable.limsi.fr/bucc2017/bucc2017-task.html). As for the dictionaries, I use [**CC-CEDICT**](https://www.mdbg.net/chinese/dictionary?page=cedict) and the restricted data `Chinese-English Translation Lexicon Version 3.0 [LDC2002L27]` (Huang et al., 2002) to generate Chinese-English dictionaries (generating functions are provided in `ChineseEnglishDictionary` class of `chinese_corpus_translator.py`). You could also generate your own dictionaries by using other resources and then don't forget to configure the dictionaries path in `config.ini`.
 
 
 ## Benchmark
