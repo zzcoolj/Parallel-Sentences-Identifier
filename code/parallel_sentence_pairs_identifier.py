@@ -83,7 +83,7 @@ class ParallelSentencePairsIdentifier(object):
         # cct_train.translate(
         #     corpus_file_path=config['training_data']['zh'],
         #     unknown_words_path=config['output_files_for_training_data']['unknown_words'],
-        #     translated_corpus_for_solr_path=config['output_files_for_training_data']['translated_corpus_for_solr_path'],
+        #     translated_corpus_path=config['output_files_for_training_data']['translated_corpus_path'],
         #     translated_corpus_for_selecter_path=
         #     config['output_files_for_training_data']['translated_corpus_for_selecter_path'])
         #
@@ -93,54 +93,65 @@ class ParallelSentencePairsIdentifier(object):
         # cct_test.translate(
         #     corpus_file_path=config['test_data']['zh'],
         #     unknown_words_path=config['output_files_for_test_data']['unknown_words'],
-        #     translated_corpus_for_solr_path=config['output_files_for_test_data']['translated_corpus_for_solr_path'],
+        #     translated_corpus_path=config['output_files_for_test_data']['translated_corpus_path'],
         #     translated_corpus_for_selecter_path=
         #     config['output_files_for_test_data']['translated_corpus_for_selecter_path'])
-        #
-        # # ------------------------------------- Searching --------------------------------------------------------------
+
+        # ------------------------------------- Searching --------------------------------------------------------------
         # print('\033[94m[Solr searching for training data]\033[0m')
         # cpsps_train = candidate_parallel_sentence_pairs_searcher.CandidateParallelSentencePairsFinder(
-        #     index_file_path=config['output_files_for_training_data']['translated_corpus_for_solr_path'])
+        #     index_file_path=config['output_files_for_training_data']['translated_corpus_path'],
+        #     index_file_for_solr_path=config['output_files_for_training_data']['corpus_for_solr'])
         # cpsps_train.search_corpus(
         #     searching_file_path=config['training_data']['en'],
         #     output_path=config['output_files_for_training_data']['source_target_and_potential_targets_path'],
         #     gold_standard_file_path=config['training_data']['gold'])
-        #
+
+        print('\033[94m[Solr searching for training data]\033[0m')
+        cpsps_train = candidate_parallel_sentence_pairs_searcher.CandidateParallelSentencePairsFinder(
+            index_file_path=config['training_data']['en'],
+            index_file_for_solr_path=config['output_files_for_training_data']['corpus_for_solr'])
+        cpsps_train.search_corpus(
+            searching_file_path=config['output_files_for_training_data']['translated_corpus_path'],
+            output_path=config['output_files_for_training_data']['source_target_and_potential_targets_path'],
+            gold_standard_file_path=config['training_data']['gold'])
+
         # print('\033[94m[Solr searching for test data]\033[0m')
         # cpsps_test = candidate_parallel_sentence_pairs_searcher.CandidateParallelSentencePairsFinder(
-        #     index_file_path=config['output_files_for_test_data']['translated_corpus_for_solr_path'])
+        #     index_file_path=config['output_files_for_test_data']['translated_corpus_path'],
+        #     index_file_for_solr_path=config['output_files_for_test_data']['corpus_for_solr'])
         # cpsps_test.search_corpus(
         #     searching_file_path=config['test_data']['en'],
         #     output_path=config['output_files_for_test_data']['source_target_and_potential_targets_path'])
 
-        # ------------------------------------- Classifying ------------------------------------------------------------
-        print('\033[94m[SVM training]\033[0m')
-        cpspc_train = candidate_parallel_sentence_pairs_classifier.CandidateParallelSentencePairsClassifier()
-        cpspc_train.preprocessing_data(
-            source_target_and_potential_targets_path=
-            config['output_files_for_training_data']['source_target_and_potential_targets_path'],
-            translated_target_information_path=
-            config['output_files_for_training_data']['translated_corpus_for_selecter_path'],
-            source_information_path=config['training_data']['en'],
-            output_folder_path_prefix=config['output_files_for_training_data']['features_labels'])
-
-        print('\033[94m[SVM predicting]\033[0m')
-        cpspc_test = candidate_parallel_sentence_pairs_classifier.CandidateParallelSentencePairsClassifier()
-        cpspc_test.prediction(
-            training_folder_path=config['output_files_for_training_data']['features_labels'],
-            test_source_target_and_potential_targets_path=
-            config['output_files_for_test_data']['source_target_and_potential_targets_path'],
-            test_translated_target_information_path=
-            config['output_files_for_test_data']['translated_corpus_for_selecter_path'],
-            test_source_information_path=config['test_data']['en'],
-            test_output_folder_path_prefix=config['output_files_for_test_data']['features_labels']
-        )
+        # # ------------------------------------- Classifying ------------------------------------------------------------
+        # print('\033[94m[SVM training]\033[0m')
+        # cpspc_train = candidate_parallel_sentence_pairs_classifier.CandidateParallelSentencePairsClassifier()
+        # cpspc_train.preprocessing_data(
+        #     source_target_and_potential_targets_path=
+        #     config['output_files_for_training_data']['source_target_and_potential_targets_path'],
+        #     translated_target_information_path=
+        #     config['output_files_for_training_data']['translated_corpus_for_selecter_path'],
+        #     source_information_path=config['training_data']['en'],
+        #     output_folder_path_prefix=config['output_files_for_training_data']['features_labels'])
+        #
+        # print('\033[94m[SVM predicting]\033[0m')
+        # cpspc_test = candidate_parallel_sentence_pairs_classifier.CandidateParallelSentencePairsClassifier()
+        # cpspc_test.prediction(
+        #     training_folder_path=config['output_files_for_training_data']['features_labels'],
+        #     test_source_target_and_potential_targets_path=
+        #     config['output_files_for_test_data']['source_target_and_potential_targets_path'],
+        #     test_translated_target_information_path=
+        #     config['output_files_for_test_data']['translated_corpus_for_selecter_path'],
+        #     test_source_information_path=config['test_data']['en'],
+        #     test_output_folder_path_prefix=config['output_files_for_test_data']['features_labels']
+        # )
 
 # Whole system test (Test run 1)
 # ParallelSentencePairsIdentifier.all()
-ParallelSentencePairsIdentifier.result_analysis(
-    predictions_path=config['output_files_for_test_data']['predictions'],
-    gold_standard_path='../data/bucc2017/test_data/zh-en.test.gold')
+# ParallelSentencePairsIdentifier.result_analysis(
+#     predictions_path=config['output_files_for_test_data']['predictions'],
+#     gold_standard_path='../data/bucc2017/test_data/zh-en.test.gold')
 
 # # Test run 2
 # ParallelSentencePairsIdentifier.result_analysis(
@@ -156,3 +167,8 @@ ParallelSentencePairsIdentifier.result_analysis(
 # ParallelSentencePairsIdentifier.result_analysis(
 #     predictions_path='../data/predictions_config3_test',
 #     gold_standard_path='../data/bucc2017/test_data/zh-en.test.gold')
+
+
+ParallelSentencePairsIdentifier.result_analysis(
+    predictions_path='../data/predictions_intersection',
+    gold_standard_path='../data/bucc2017/training_data/zh-en.training.gold')

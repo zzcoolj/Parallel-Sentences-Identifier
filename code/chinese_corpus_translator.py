@@ -22,7 +22,7 @@ class ChineseCorpusTranslator(object):
             english_stem, english_stem_for_dict)
 
     def translate(self, corpus_file_path, unknown_words_path,
-                  translated_corpus_for_solr_path, translated_corpus_for_selecter_path):
+                  translated_corpus_path, translated_corpus_for_selecter_path):
         translated_target_file_dict = {}
         target_file_word_count_dict = {}
         all_unknown_words = set()
@@ -39,11 +39,10 @@ class ChineseCorpusTranslator(object):
         for item in list(all_unknown_words):
             unknown_words_file.write("%s\n" % item)
         # Write translated target file to a file for Solr indexing and a file for selecter(SVM)
-        f = open(translated_corpus_for_solr_path, 'w')
+        f = open(translated_corpus_path, 'w')
         f2 = open(translated_corpus_for_selecter_path, 'w')
-        f.write('id,sentence\n')
         for identifier, sentence_translation in translated_target_file_dict.items():
-            f.write('%s,%s\n' % (identifier, sentence_translation))
+            f.write('%s\t%s\n' % (identifier, sentence_translation))
             # i.e. id,english_translation,original(Chinese)_sentence_length(count by words)
             f2.write('%s,%s,%d\n' % (identifier, sentence_translation, target_file_word_count_dict[identifier]))
 
@@ -82,7 +81,7 @@ class ChineseSentenceTranslator(object):
     def translate(self, sentence):
         # Get sentence segmentation
         chinese_tokens_list = list(self.chinese_tokenizer(sentence))
-        chinese_tokens_list = self.preprocess_chinese_sentence(chinese_tokens_list)
+        chinese_tokens_list = self.__preprocess_chinese_sentence(chinese_tokens_list)
         # list of lists, cause each word may have several translations
         tokens_translations = []
         unknown_words = set()
@@ -97,7 +96,7 @@ class ChineseSentenceTranslator(object):
                     if self.english_stem_for_dict:
                         token_translations = list(set([self.stemmer.stem(e) for e in token_translations]))
 
-                    tokens_translations.append(self.process_token_translations(token_translations))
+                    tokens_translations.append(self.__process_token_translations(token_translations))
                 else:
                     try:
                         # check whether the string can be encoded only with ASCII characters
@@ -106,22 +105,25 @@ class ChineseSentenceTranslator(object):
                     except UnicodeEncodeError:
                         unknown_words.add(chinese_token)
                     else:
-                        tokens_translations.append(self.process_token_translations([chinese_token]))
+                        tokens_translations.append(self.__process_token_translations([chinese_token]))
 
         sentence_translation = ' '.join(tokens_translations)
-        # TODO why remove ',' and '"' ? because of Solr indexing?
+
+        # Before loading csv file into Solr, remove ',' and '"'
+        # Attention : same code in __init__ of CandidateParallelSentencePairsFinder
         sentence_translation = sentence_translation.replace(',', ' ')
         sentence_translation = sentence_translation.replace('"', ' ')
+
         return sentence_translation, unknown_words
 
-    def preprocess_chinese_sentence(self, chinese_tokens_list):
+    def __preprocess_chinese_sentence(self, chinese_tokens_list):
         if self.remove_chinese_stopwords:
             result = [chinese_token for chinese_token in chinese_tokens_list if
                       chinese_token not in self.chinese_stopwords]
             return result
         return chinese_tokens_list
 
-    def process_token_translations(self, token_translations):
+    def __process_token_translations(self, token_translations):
         """
         :param token_translations: list of translations of a Chinese token
         :return: string (concatenation of all the translations)
@@ -176,7 +178,18 @@ class ChineseSentenceTranslator(object):
         return sum(translation_num) / len(translation_num)
 
 
-class ChineseEnglishDictionary(object):
+class Dictionary(object):
+    @staticmethod
+    def merge_two_dictionaries(d1, d2):
+        for key, value in d2.items():
+            if key in d1:
+                d1[key] = list(set(d1[key] + value))
+            else:
+                d1[key] = value
+        return d1
+
+
+class ChineseEnglishDictionary(Dictionary):
     def __init__(self):
         pass
 
@@ -240,14 +253,52 @@ class ChineseEnglishDictionary(object):
             zip(unknown_words_merged_accurate_mode_zh, unknown_words_merged_accurate_mode_en))
         return merged_unknown_words_dict
 
+
+class EnglishChineseDictionary(Dictionary):
+    """
+    Unlike in ChineseEnglishDictionary, Chinese word could be both simplified or traditional.
+    In EnglishChineseDictionary, Chinese is always in simplified format.
+    """
+
     @staticmethod
-    def merge_two_dictionaries(d1, d2):
-        for key, value in d2.items():
-            if key in d1:
-                d1[key] = list(set(d1[key] + value))
-            else:
-                d1[key] = value
-        return d1
+    def load_ldc_cedict_gb_v3(file_path):
+        # sample (encoded with GB2312):   阿波罗	/Apollo/
+        d = {}
+        with open(file_path, "rb") as f:
+            for line in f:
+                # gb2312 encoding transfer to Unicode
+                line_elements = line.decode('gb2312').rstrip('\n').split('\t')
+                chinese_simplified = line_elements[0]
+                english = line_elements[1][1:-1]
+                # One chinese word may have more than one english translations
+                english_translations = english.split('/')
+                for english_translation in english_translations:
+                    if english_translation in d:
+                        d[english_translation].append(chinese_simplified)
+                    else:
+                        d[english_translation] = [chinese_simplified]
+        return d
+
+    @staticmethod
+    def load_cc_cedict_data(file_path):
+        # 中國證監會 中国证监会 [Zhong1 guo2 Zheng4 jian4 hui4] /China Securities Regulatory Commission (CSRC)/abbr. for 中國證券監督管理委員會|中国证券监督管理委员会/
+        d = {}
+        with open(file_path) as f:
+            for line in f:
+                # Skip comment line
+                if line[0] in ['#', '%']:
+                    continue
+                line = line.rstrip('\n')
+                chinese_simplified = line.split(" ")[1]
+                # One chinese word may have more than one english translations
+                english = line[line.find('/') + 1:-1]
+                english_translations = english.split('/')
+                for english_translation in english_translations:
+                    if english_translation in d:
+                        d[english_translation].append(chinese_simplified)
+                    else:
+                        d[english_translation] = [chinese_simplified]
+        return d
 
 
 class Corpus(object):
@@ -332,3 +383,9 @@ class Corpus(object):
 # cct = ChineseCorpusTranslator()
 # sentence_translation, unknown_words = cct.chinese_sentence_translator.translate('輪狀病毒則通常是通過與被感染的兒童的直接接觸傳播。')
 # print(sentence_translation)
+
+# Build English-Chinese dictionary
+d = EnglishChineseDictionary.merge_two_dictionaries(
+    EnglishChineseDictionary.load_ldc_cedict_gb_v3('/Users/zzcoolj/Code/bucc2017/data/dictionaries/ldc2002l27/data/ldc_cedict.gb.v3'),
+    EnglishChineseDictionary.load_cc_cedict_data('/Users/zzcoolj/Code/bucc2017/data/dictionaries/cedict_ts.u8'))
+common.write_dict_to_file_value_type_specified('/Users/zzcoolj/Code/bucc2017/data/dictionaries/en_ch_dict_cc_ldc', d, str)

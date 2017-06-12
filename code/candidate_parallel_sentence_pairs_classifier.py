@@ -477,5 +477,5 @@ class CandidateParallelSentencePairsClassifier(object):
 # # For test
 # CandidateParallelSentencePairsClassifier.evaluation(folder_path='../data/temp_data/classifier/training/')
 
-CandidateParallelSentencePairsClassifier.find_best_c_gamma(
-    folder_path='../data/temp_data/classifier/training_temp/')
+# CandidateParallelSentencePairsClassifier.find_best_c_gamma(
+#     folder_path='../data/temp_data/classifier/training_temp/')

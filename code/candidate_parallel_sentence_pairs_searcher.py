@@ -17,14 +17,27 @@ import visual_diagnostics
 
 
 class CandidateParallelSentencePairsFinder(object):
-    def __init__(self, index_file_path, english_remove_stopwords=False, english_stem=True):
+    def __init__(self, index_file_path, index_file_for_solr_path,
+                 english_remove_stopwords=False, english_stem=True):
+        # Change index_file line style from id\tsentence\n to id,sentence\n & add 'id,sentence\n' as the first line
+        f = open(index_file_for_solr_path, 'w')
+        f.write('id,sentence\n')
+        with open(index_file_path) as f2:
+            for line in f2:
+                (key, val) = line.rstrip('\n').split("\t")
+
+                # Before loading csv file into Solr, remove ',' and '"'
+                val = val.replace(',', ' ')
+                val = val.replace('"', ' ')
+
+                f.write('%s,%s\n' % (key, val))
         # Remove previous server data (assuming that Solr has already been started)
         print('\033[94m[Solr loading data]\033[0m')
         urlopen(
             'http://localhost:8983/solr/gettingstarted/'
             'update?stream.body=<delete><query>*:*</query></delete>&commit=true')
         # Load data into Solr server
-        index_file_absolute_path = os.getcwd().replace('code', index_file_path.replace('../', ''))
+        index_file_absolute_path = os.getcwd().replace('code', index_file_for_solr_path.replace('../', ''))
         os.system('cd /Users/zzcoolj/Code/bucc2017/solr-6.4.2/;'
                   'bin/post -c gettingstarted ' + index_file_absolute_path)
         self.english_remove_stopwords = english_remove_stopwords
@@ -107,45 +120,42 @@ class CandidateParallelSentencePairsFinder(object):
             exit()
             return ['test']
 
-    def search_corpus(self, searching_file_path, output_path,
-                      gold_standard_file_path=None, only_search_gold_standard=False):
+    def search_corpus(self, searching_file_path, output_path, gold_standard_file_path=None):
         source_target_and_potential_targets = dict()
-        source_dict = common.read_two_columns_file_to_build_dictionary_type_specified(searching_file_path, str, str)
+        searching_file = common.read_two_columns_file_to_build_dictionary_type_specified(searching_file_path, str, str)
+
+        counter = 0
+        for searching_id, searching_sentence in searching_file.items():
+            searching_sentence = self.__pre_process_sentence(searching_sentence)
+            target_potential_targets_ids = self.__search_potential_target_sentences(searching_sentence,
+                                                                                    config['solr_parameters']['rows'])
+            target_potential_targets_ids.insert(0, 'NONE')
+            source_target_and_potential_targets[searching_id] = target_potential_targets_ids
+            counter += 1
+            if counter % 5000 == 0:
+                print(counter, "sentences searched")
 
         counter = 0
         if gold_standard_file_path is not None:
             # Generate source_target_and_potential_targets by using gold standard.
+            if searching_file_path.endswith('.en'):
+                searching_id_pos = 1
+                result_id_pos = 0
+            elif (searching_file_path == config['output_files_for_training_data']['translated_corpus_path']) \
+                    or (searching_file_path == config['output_files_for_test_data']['translated_corpus_path']):
+                searching_id_pos = 0
+                result_id_pos = 1
+            else:
+                raise ValueError('searching_file_path is not correct')
+
             with open(gold_standard_file_path) as f:
                 for line in f:
-                    (target_id, source_id) = line.rstrip('\n').split("\t")
-                    # TODO NOW searching_file is source file?
-                    source_sentence = source_dict[source_id]
-                    searching_sentence = self.__pre_process_sentence(source_sentence)
-                    target_potential_targets_ids = self.__search_potential_target_sentences(searching_sentence,
-                                                                                          config['solr_parameters'][
-                                                                                              'rows'])
-                    target_potential_targets_ids.insert(0, target_id)
-                    source_target_and_potential_targets[source_id] = target_potential_targets_ids
+                    zh_id_en_id = line.rstrip('\n').split("\t")
+                    searching_id = zh_id_en_id[searching_id_pos]
+                    # replace 'NONE' with the result_id in gold standard
+                    source_target_and_potential_targets[searching_id][0] = zh_id_en_id[result_id_pos]
                     counter += 1
-                    if counter % 5000 == 0:
-                        print(counter, "sentences searched")
-
-        if not only_search_gold_standard:
-            # Generate source_target_and_potential_targets by using source file.
-            for source_id, source_sentence in source_dict.items():
-                if source_id in source_target_and_potential_targets:
-                    # Already added by gold standard
-                    continue
-                else:
-                    searching_sentence = self.__pre_process_sentence(source_sentence)
-                    target_potential_targets_ids = self.__search_potential_target_sentences(searching_sentence,
-                                                                                          config['solr_parameters'][
-                                                                                              'rows'])
-                    target_potential_targets_ids.insert(0, 'NONE')
-                    source_target_and_potential_targets[source_id] = target_potential_targets_ids
-                    counter += 1
-                    if counter % 5000 == 0:
-                        print(counter, "sentences searched")
+            print(counter, "sentences updated by using gold standard")
 
         # Write
         common.write_dict_to_file_value_type_specified(output_path, source_target_and_potential_targets, list)
@@ -338,6 +348,32 @@ class CandidateParallelSentencePairsFinder(object):
                   "bin/solr stop -all;"
                   "rm -rf example/cloud/")
 
+    @staticmethod
+    def get_intersection_of_two_direction_searching_results(result1_path, result2_path, pred_path, intersection_size):
+        d = dict()
+        '''
+        en-000060896	NONE	zh-000080465/18.478466	zh-000031988/16.8481	zh-000051791/15.051238
+        d[en-000060896] = [zh-000080465, zh-000031988, zh-000051791]
+        '''
+        with open(result1_path, "r") as f:
+            reader = csv.reader(f, delimiter='\t')
+            for line in list(reader):
+                d[line[0]] = [id_score.split('/')[0] for id_score in line[2:2+intersection_size]]
+        pred = open(pred_path, 'w')
+        '''
+        zh-000040462	NONE	en-000011866/76.6582	en-000029393/74.47097	en-000075583/72.83213
+        '''
+        with open(result2_path, "r") as f:
+            reader = csv.reader(f, delimiter='\t')
+            for line in list(reader):
+                for key_id_score in line[2:2+intersection_size]:
+                    key_id = key_id_score.split('/')[0]
+                    if key_id in d:
+                        value_id = line[0].split('/')[0]
+                        if value_id in d[key_id]:
+                            pred.write(value_id + '\t' + key_id + '\n')
+
+
 
 # # Corpus searching test
 # cpspf = CandidateParallelSentencePairsFinder(index_file_path='/Users/zzcoolj/Code/bucc2017/data/temp_data/'
@@ -360,9 +396,16 @@ class CandidateParallelSentencePairsFinder(object):
 
 # # Evaluate
 # CandidateParallelSentencePairsFinder.evaluate_search_engine_result(
-#     source_target_and_potential_targets_path='../data/temp_data/source_target_and_potential_targets_training',
+#     source_target_and_potential_targets_path='../data/temp_data/source_target_and_potential_targets_training_reverse',
 #     gold_standard_num=1899,
 #     find_best_rows_score_combination_parameters_decided=True,
 #     search_gold_standard=True,
 #     search_source_file=False
+# )
+
+# CandidateParallelSentencePairsFinder.get_intersection_of_two_direction_searching_results(
+#     result1_path='../data/temp_data/source_target_and_potential_targets_training_toCompare',
+#     result2_path='../data/temp_data/source_target_and_potential_targets_training_reverse',
+#     pred_path='../data/predictions_intersection',
+#     intersection_size=1
 # )
