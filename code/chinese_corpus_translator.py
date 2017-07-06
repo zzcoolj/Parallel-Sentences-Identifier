@@ -5,6 +5,7 @@ import string
 import jieba
 import configparser
 import common
+from sklearn.externals import joblib
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -22,17 +23,19 @@ class ChineseCorpusTranslator(object):
             english_stem, english_stem_for_dict)
 
     def translate(self, corpus_file_path, unknown_words_path,
-                  translated_corpus_path, translated_corpus_for_selecter_path):
+                  translated_corpus_path, translated_corpus_for_selecter_path, translated_corpus_list_of_list_path):
         translated_target_file_dict = {}
         target_file_word_count_dict = {}
+        tokens_translations_dict = {}
         all_unknown_words = set()
         corpus = common.read_two_columns_file_to_build_dictionary_type_specified(corpus_file_path, str, str)
 
         for identifier, sentence in corpus.items():
-            sentence_translation, unknown_words = self.chinese_sentence_translator.translate(sentence)
+            sentence_translation, unknown_words, tokens_translations = self.chinese_sentence_translator.translate(sentence)
             all_unknown_words |= unknown_words
             translated_target_file_dict[identifier] = sentence_translation
             target_file_word_count_dict[identifier] = ChineseSentenceTranslator.get_chinese_sentence_length(sentence)
+            tokens_translations_dict[identifier] = tokens_translations
 
         # Write unknown words
         unknown_words_file = open(unknown_words_path, 'w')
@@ -45,6 +48,8 @@ class ChineseCorpusTranslator(object):
             f.write('%s\t%s\n' % (identifier, sentence_translation))
             # i.e. id,english_translation,original(Chinese)_sentence_length(count by words)
             f2.write('%s,%s,%d\n' % (identifier, sentence_translation, target_file_word_count_dict[identifier]))
+        # Write tokens_translations_dict
+        joblib.dump(tokens_translations_dict, translated_corpus_list_of_list_path)
 
 
 class ChineseSentenceTranslator(object):
@@ -82,7 +87,7 @@ class ChineseSentenceTranslator(object):
         # Get sentence segmentation
         chinese_tokens_list = list(self.chinese_tokenizer(sentence))
         chinese_tokens_list = self.__preprocess_chinese_sentence(chinese_tokens_list)
-        # list of lists, cause each word may have several translations
+        # list of string, cause each word may have several translations
         tokens_translations = []
         unknown_words = set()
 
@@ -114,7 +119,7 @@ class ChineseSentenceTranslator(object):
         sentence_translation = sentence_translation.replace(',', ' ')
         sentence_translation = sentence_translation.replace('"', ' ')
 
-        return sentence_translation, unknown_words
+        return sentence_translation, unknown_words, tokens_translations
 
     def __preprocess_chinese_sentence(self, chinese_tokens_list):
         if self.remove_chinese_stopwords:
@@ -388,4 +393,4 @@ class Corpus(object):
 d = EnglishChineseDictionary.merge_two_dictionaries(
     EnglishChineseDictionary.load_ldc_cedict_gb_v3('/Users/zzcoolj/Code/bucc2017/data/dictionaries/ldc2002l27/data/ldc_cedict.gb.v3'),
     EnglishChineseDictionary.load_cc_cedict_data('/Users/zzcoolj/Code/bucc2017/data/dictionaries/cedict_ts.u8'))
-common.write_dict_to_file_value_type_specified('/Users/zzcoolj/Code/bucc2017/data/dictionaries/en_ch_dict_cc_ldc', d, str)
+common.write_dict_to_file_value_type_specified('/Users/zzcoolj/Code/bucc2017/data/dictionaries/en_ch_dict_cc_ldc', d, list)

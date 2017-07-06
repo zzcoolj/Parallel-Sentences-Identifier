@@ -34,6 +34,7 @@ class CandidateParallelSentencePairsClassifier(object):
     @staticmethod
     def preprocessing_data(source_target_and_potential_targets_path,
                            translated_target_information_path,
+                           translated_corpus_list_of_list_path,
                            source_information_path,
                            output_folder_path_prefix,
                            use_extra_positive_information=True,
@@ -172,7 +173,7 @@ class CandidateParallelSentencePairsClassifier(object):
         '''
         overlap = []
         tfidf_cos = []
-        Solr_index = []
+        # Solr_index = []
         Solr_score = []
         sentence_length_rate = []
         LSA = []
@@ -227,6 +228,8 @@ class CandidateParallelSentencePairsClassifier(object):
             if len(node_info_element) == 2:
                 node_info_element.append(get_english_sentence_length(node_info_element[1]))
 
+        translated_target_info_list_of_list = joblib.load(translated_corpus_list_of_list_path)
+
         counter = 0
         for i in range(len(training_set)):
             source_id = training_set[i][0]
@@ -240,15 +243,41 @@ class CandidateParallelSentencePairsClassifier(object):
             sentence_length_rate.append(len_target / len_source)
 
             # overlap
-            source_sentence = source_info[1].lower().split(" ")
-            source_sentence = [token for token in source_sentence if token not in stpwds]
-            source_sentence = [stemmer.stem(token) for token in source_sentence]
+            # source_sentence = source_info[1].lower().split(" ")
+            # source_sentence = [token for token in source_sentence if token not in stpwds]
+            # source_sentence = [stemmer.stem(token) for token in source_sentence]
+            # target_sentence = target_info[1].lower().split(" ")
+            # target_sentence = [token for token in target_sentence if token not in stpwds]
+            # target_sentence = [stemmer.stem(token) for token in target_sentence]
+            # overlap.append(len(set(source_sentence).intersection(set(target_sentence))) / len_source)
 
-            target_sentence = target_info[1].lower().split(" ")
-            target_sentence = [token for token in target_sentence if token not in stpwds]
-            target_sentence = [stemmer.stem(token) for token in target_sentence]
+            # TODO NOW new overlap function
+            def get_overlap(source_info, target_info, target_id):
+                # TODO NOW for the word ends with , or other punctuation marks?
+                source_sentence = source_info[1].lower().split(" ")
+                # TODO NOW global english_remove_stpwds & english_stem
+                source_sentence = [token for token in source_sentence if token not in stpwds]
+                source_sentence = [stemmer.stem(token) for token in source_sentence]
 
-            overlap.append(len(set(source_sentence).intersection(set(target_sentence))) / len_source)
+                target_sentence = target_info[1].lower().split(" ")
+                target_sentence = [token for token in target_sentence if token not in stpwds]
+                target_sentence = [stemmer.stem(token) for token in target_sentence]
+                target_tokens_translations_copy = translated_target_info_list_of_list[target_id][:]
+
+                # print(target_sentence)
+                # print(target_tokens_translations_copy)
+                overlap = 0
+                for source_token in source_sentence:
+                    for token_translations in target_tokens_translations_copy:
+                        # TODO NOW token translations have not stemmed or removing stpwds
+                        if source_token in token_translations:
+                            overlap += 1
+                            target_tokens_translations_copy.remove(token_translations)
+                            break
+                # print(overlap)
+                overlap = overlap / (len_source + len_target - overlap)
+                return overlap
+            overlap.append(get_overlap(source_info, target_info, target_id))
 
             # tfidf_cos
             vector1 = M[ID_pos[source_id], :].toarray()[0]
@@ -261,7 +290,7 @@ class CandidateParallelSentencePairsClassifier(object):
             # TODO LSA memory error
             # LSA.append(cosine(M2[ID_pos[target], :], M2[ID_pos[source], :]))
 
-            Solr_index.append(int(training_set[i][3]))
+            # Solr_index.append(int(training_set[i][3]))
             Solr_score.append(float(training_set[i][4]))
 
             if show_detail:
@@ -273,8 +302,8 @@ class CandidateParallelSentencePairsClassifier(object):
         # documents as rows, unique words as columns (i.e., example as rows, features as columns)
         # TODO LSA memory error
         training_features_original = np.array(
-            [overlap, tfidf_cos, Solr_index, Solr_score, sentence_length_rate],
-            # [overlap, Solr_index, Solr_score, sentence_length_rate],
+            # [overlap, tfidf_cos, Solr_index, Solr_score, sentence_length_rate],
+            [overlap, tfidf_cos, Solr_score, sentence_length_rate],
             dtype=np.float64).T
         training_features_scaled = preprocessing.scale(training_features_original)
 
@@ -426,6 +455,7 @@ class CandidateParallelSentencePairsClassifier(object):
                    training_folder_path,
                    test_source_target_and_potential_targets_path,
                    test_translated_target_information_path,
+                   test_translated_corpus_list_of_list_path,
                    test_source_information_path,
                    test_output_folder_path_prefix
                    ):
@@ -458,6 +488,7 @@ class CandidateParallelSentencePairsClassifier(object):
         test_features_scaled, test_training_set = self.preprocessing_data(
             source_target_and_potential_targets_path=test_source_target_and_potential_targets_path,
             translated_target_information_path=test_translated_target_information_path,
+            translated_corpus_list_of_list_path=test_translated_corpus_list_of_list_path,
             source_information_path=test_source_information_path,
             output_folder_path_prefix=test_output_folder_path_prefix,
             use_extra_positive_information=False,
