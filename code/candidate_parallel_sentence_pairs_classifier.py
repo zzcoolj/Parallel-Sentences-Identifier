@@ -50,6 +50,40 @@ class CandidateParallelSentencePairsClassifier(object):
             tokens = re.findall(r"[\w]+|[^\s\w]", sentence)
             return len(tokens)
 
+        def get_overlap(source_sentence, target_sentence_list):
+            # TODO NOW for the word ends with , or other punctuation marks?
+            source_sentence = source_sentence.lower().split(" ")
+            if config.getboolean("preprocessing_text", "remove_english_stopwords_for_overlap"):
+                source_sentence = [token for token in source_sentence if token not in stpwds]
+            if config.getboolean("preprocessing_text", "english_stemming_for_overlap"):
+                source_sentence = [stemmer.stem(token) for token in source_sentence]
+
+            target_sentence_list_copy = []
+            for token_translations_words_list in target_sentence_list:
+                token_translations_words_list = token_translations_words_list.lower().split(" ")
+                if config.getboolean("preprocessing_text", "remove_english_stopwords_for_overlap"):
+                    token_translations_words_list = \
+                        [token for token in token_translations_words_list if token not in stpwds]
+                if config.getboolean("preprocessing_text", "english_stemming_for_overlap"):
+                    token_translations_words_list = \
+                        [stemmer.stem(token) for token in token_translations_words_list]
+                target_sentence_list_copy.append(token_translations_words_list)
+
+            count = 0
+            for source_token in source_sentence:
+                for token_translations_words_list in target_sentence_list_copy:
+                    if source_token in token_translations_words_list:
+                        count += 1
+                        target_sentence_list_copy.remove(token_translations_words_list)
+                        break
+
+            len_valid_source_tokens = len(source_sentence)
+            # TODO NOW if after stem or removing stopwords, token_translations is empty
+            # TODO NOW => len_valid_target_tokens should reduce 1
+            len_valid_target_tokens = len(target_sentence_list)
+            result = count / (len_valid_source_tokens + len_valid_target_tokens - count)
+            return result
+
         # nltk.data.path = ['/vol/datailes/tools/nlp/nltk_data/2016']
         nltk.data.path.append("/Users/zzcoolj/Code/NLTK/nltk_data")
         stpwds = set(nltk.corpus.stopwords.words("english"))
@@ -243,47 +277,9 @@ class CandidateParallelSentencePairsClassifier(object):
             sentence_length_rate.append(len_target / len_source)
 
             # overlap
-            # source_sentence = source_info[1].lower().split(" ")
-            # source_sentence = [token for token in source_sentence if token not in stpwds]
-            # source_sentence = [stemmer.stem(token) for token in source_sentence]
-            # target_sentence = target_info[1].lower().split(" ")
-            # target_sentence = [token for token in target_sentence if token not in stpwds]
-            # target_sentence = [stemmer.stem(token) for token in target_sentence]
-            # overlap.append(len(set(source_sentence).intersection(set(target_sentence))) / len_source)
-
-            # TODO NOW new overlap function
-            def get_overlap(source_info, target_id):
-                # TODO NOW for the word ends with , or other punctuation marks?
-                source_sentence = source_info[1].lower().split(" ")
-                if config.getboolean("preprocessing_text", "remove_english_stopwords_for_overlap"):
-                    source_sentence = [token for token in source_sentence if token not in stpwds]
-                if config.getboolean("preprocessing_text", "english_stemming_for_overlap"):
-                    source_sentence = [stemmer.stem(token) for token in source_sentence]
-                target_tokens_translations_copy = translated_target_info_list_of_list[target_id][:]
-
-                count = 0
-                for source_token in source_sentence:
-                    for token_translations in target_tokens_translations_copy:
-                        token_translations_words_list = token_translations.lower().split(" ")
-                        if config.getboolean("preprocessing_text", "remove_english_stopwords_for_overlap"):
-                            token_translations_words_list = \
-                                [token for token in token_translations_words_list if token not in stpwds]
-                        if config.getboolean("preprocessing_text", "english_stemming_for_overlap"):
-                            token_translations_words_list = \
-                                [stemmer.stem(token) for token in token_translations_words_list]
-                        if source_token in token_translations_words_list:
-                            count += 1
-                            target_tokens_translations_copy.remove(token_translations)
-                            break
-
-                len_valid_source_tokens = len(source_sentence)
-                # TODO NOW if after stem or removing stopwords, token_translations is empty
-                # TODO NOW => len_valid_target_tokens should reduce 1
-                len_valid_target_tokens = len(translated_target_info_list_of_list[target_id])
-                result = count / (len_valid_source_tokens + len_valid_target_tokens - count)
-                return result
-
-            overlap.append(get_overlap(source_info, target_id))
+            overlap.append(get_overlap(
+                source_sentence=source_info[1],
+                target_sentence_list=translated_target_info_list_of_list[target_id]))
 
             # tfidf_cos
             vector1 = M[ID_pos[source_id], :].toarray()[0]
