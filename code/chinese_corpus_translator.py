@@ -13,14 +13,16 @@ config.read('config.ini')
 
 class ChineseCorpusTranslator(object):
     def __init__(self, zh_en_dict_path,
-                 tokenizer_mode='full_mode',
-                 remove_chinese_stopwords=False, english_remove_stopwords=False,
-                 english_stem=True, english_stem_for_dict=False):
+                 remove_chinese_stopwords, english_remove_stopwords,
+                 english_stem, english_stem_for_dict,
+                 tokenizer_mode='full_mode',):
         self.chinese_sentence_translator = ChineseSentenceTranslator(
-            zh_en_dict_path,
-            tokenizer_mode,
-            remove_chinese_stopwords, english_remove_stopwords,
-            english_stem, english_stem_for_dict)
+            zh_en_dict_path=zh_en_dict_path,
+            tokenizer_mode=tokenizer_mode,
+            remove_chinese_stopwords=remove_chinese_stopwords,
+            english_remove_stopwords=english_remove_stopwords,
+            english_stem=english_stem,
+            english_stem_for_dict=english_stem_for_dict)
 
     def translate(self, corpus_file_path, unknown_words_path,
                   translated_corpus_path, translated_corpus_for_selecter_path, translated_corpus_list_of_list_path):
@@ -62,6 +64,10 @@ class ChineseSentenceTranslator(object):
         self.english_stem = english_stem
         self.english_stem_for_dict = english_stem_for_dict
         self.chinese_tokenizer = ChineseSentenceTranslator.get_chinese_tokenizer(tokenizer_mode)
+
+        print(self.remove_chinese_stopwords)
+        exit()
+
         # Prepare resources for removing stop words and stem.
         if english_remove_stopwords:
             self.stpwds = set(nltk.corpus.stopwords.words("english"))
@@ -114,10 +120,11 @@ class ChineseSentenceTranslator(object):
 
         sentence_translation = ' '.join(tokens_translations)
 
-        # Before loading csv file into Solr, remove ',' and '"'
-        # Attention : same code in __init__ of CandidateParallelSentencePairsFinder
-        sentence_translation = sentence_translation.replace(',', ' ')
-        sentence_translation = sentence_translation.replace('"', ' ')
+        # TODO Useless, after test OK => discard
+        # # Before loading csv file into Solr, remove ',' and '"'
+        # # Attention : same code in __init__ of CandidateParallelSentencePairsFinder
+        # sentence_translation = sentence_translation.replace(',', ' ')
+        # sentence_translation = sentence_translation.replace('"', ' ')
 
         return sentence_translation, unknown_words, tokens_translations
 
@@ -389,8 +396,8 @@ class Corpus(object):
 # sentence_translation, unknown_words = cct.chinese_sentence_translator.translate('輪狀病毒則通常是通過與被感染的兒童的直接接觸傳播。')
 # print(sentence_translation)
 
-# Build English-Chinese dictionary
-d = EnglishChineseDictionary.merge_two_dictionaries(
-    EnglishChineseDictionary.load_ldc_cedict_gb_v3('/Users/zzcoolj/Code/bucc2017/data/dictionaries/ldc2002l27/data/ldc_cedict.gb.v3'),
-    EnglishChineseDictionary.load_cc_cedict_data('/Users/zzcoolj/Code/bucc2017/data/dictionaries/cedict_ts.u8'))
-common.write_dict_to_file_value_type_specified('/Users/zzcoolj/Code/bucc2017/data/dictionaries/en_ch_dict_cc_ldc', d, list)
+# # Build English-Chinese dictionary
+# d = EnglishChineseDictionary.merge_two_dictionaries(
+#     EnglishChineseDictionary.load_ldc_cedict_gb_v3('/Users/zzcoolj/Code/bucc2017/data/dictionaries/ldc2002l27/data/ldc_cedict.gb.v3'),
+#     EnglishChineseDictionary.load_cc_cedict_data('/Users/zzcoolj/Code/bucc2017/data/dictionaries/cedict_ts.u8'))
+# common.write_dict_to_file_value_type_specified('/Users/zzcoolj/Code/bucc2017/data/dictionaries/en_ch_dict_cc_ldc', d, list)

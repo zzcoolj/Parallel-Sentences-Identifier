@@ -28,4 +28,4 @@ Precision | Recall | F1-score | Remark
 --------- | ------ | -------- | ------
 0.4242 | 0.4441 | 0.4339 | Baseline (First public version for paper review)
 0.4247 | 0.4815 | 0.4513 | From functional programming to OOP; Debugs
-0.3887 | 0.5111 | 0.4416 | `solr_topN` changed from 3 to 1; Remove `Solr_index` feature (as it is always 1); New overlap function 
+0.4196 | 0.5206 | 0.4647 | `solr_topN` changed from 3 to 1; Remove `Solr_index` feature (as it is always 1); New overlap function

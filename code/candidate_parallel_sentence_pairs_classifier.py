@@ -252,32 +252,38 @@ class CandidateParallelSentencePairsClassifier(object):
             # overlap.append(len(set(source_sentence).intersection(set(target_sentence))) / len_source)
 
             # TODO NOW new overlap function
-            def get_overlap(source_info, target_info, target_id):
+            def get_overlap(source_info, target_id):
                 # TODO NOW for the word ends with , or other punctuation marks?
                 source_sentence = source_info[1].lower().split(" ")
-                # TODO NOW global english_remove_stpwds & english_stem
-                source_sentence = [token for token in source_sentence if token not in stpwds]
-                source_sentence = [stemmer.stem(token) for token in source_sentence]
-
-                target_sentence = target_info[1].lower().split(" ")
-                target_sentence = [token for token in target_sentence if token not in stpwds]
-                target_sentence = [stemmer.stem(token) for token in target_sentence]
+                if config.getboolean("preprocessing_text", "remove_english_stopwords_for_overlap"):
+                    source_sentence = [token for token in source_sentence if token not in stpwds]
+                if config.getboolean("preprocessing_text", "english_stemming_for_overlap"):
+                    source_sentence = [stemmer.stem(token) for token in source_sentence]
                 target_tokens_translations_copy = translated_target_info_list_of_list[target_id][:]
 
-                # print(target_sentence)
-                # print(target_tokens_translations_copy)
-                overlap = 0
+                count = 0
                 for source_token in source_sentence:
                     for token_translations in target_tokens_translations_copy:
-                        # TODO NOW token translations have not stemmed or removing stpwds
-                        if source_token in token_translations:
-                            overlap += 1
+                        token_translations_words_list = token_translations.lower().split(" ")
+                        if config.getboolean("preprocessing_text", "remove_english_stopwords_for_overlap"):
+                            token_translations_words_list = \
+                                [token for token in token_translations_words_list if token not in stpwds]
+                        if config.getboolean("preprocessing_text", "english_stemming_for_overlap"):
+                            token_translations_words_list = \
+                                [stemmer.stem(token) for token in token_translations_words_list]
+                        if source_token in token_translations_words_list:
+                            count += 1
                             target_tokens_translations_copy.remove(token_translations)
                             break
-                # print(overlap)
-                overlap = overlap / (len_source + len_target - overlap)
-                return overlap
-            overlap.append(get_overlap(source_info, target_info, target_id))
+
+                len_valid_source_tokens = len(source_sentence)
+                # TODO NOW if after stem or removing stopwords, token_translations is empty
+                # TODO NOW => len_valid_target_tokens should reduce 1
+                len_valid_target_tokens = len(translated_target_info_list_of_list[target_id])
+                result = count / (len_valid_source_tokens + len_valid_target_tokens - count)
+                return result
+
+            overlap.append(get_overlap(source_info, target_id))
 
             # tfidf_cos
             vector1 = M[ID_pos[source_id], :].toarray()[0]
@@ -302,7 +308,6 @@ class CandidateParallelSentencePairsClassifier(object):
         # documents as rows, unique words as columns (i.e., example as rows, features as columns)
         # TODO LSA memory error
         training_features_original = np.array(
-            # [overlap, tfidf_cos, Solr_index, Solr_score, sentence_length_rate],
             [overlap, tfidf_cos, Solr_score, sentence_length_rate],
             dtype=np.float64).T
         training_features_scaled = preprocessing.scale(training_features_original)

@@ -79,7 +79,12 @@ class ParallelSentencePairsIdentifier(object):
         # # ------------------------------------- Translating ----------------------------------------------------------
         # print('\033[94m[translating training target file]\033[0m')
         # cct_train = chinese_corpus_translator.ChineseCorpusTranslator(
-        #     zh_en_dict_path=config['dictionary']['zh_en_dict_for_training_data'])
+        #     zh_en_dict_path=config['dictionary']['zh_en_dict_for_training_data'],
+        #     remove_chinese_stopwords=config.getboolean("preprocessing_text", "remove_chinese_stopwords"),
+        #     english_remove_stopwords=config.getboolean("preprocessing_text", "remove_english_stopwords"),
+        #     english_stem=config.getboolean("preprocessing_text", "english_stemming"),
+        #     english_stem_for_dict=config.getboolean("preprocessing_text", "zh_en_dict_stemming"))
+        #
         # cct_train.translate(
         #     corpus_file_path=config['training_data']['zh'],
         #     unknown_words_path=config['output_files_for_training_data']['unknown_words'],
@@ -91,7 +96,11 @@ class ParallelSentencePairsIdentifier(object):
         #
         # print('\033[94m[translating test target file]\033[0m')
         # cct_test = chinese_corpus_translator.ChineseCorpusTranslator(
-        #     zh_en_dict_path=config['dictionary']['zh_en_dict_for_test_data'])
+        #     zh_en_dict_path=config['dictionary']['zh_en_dict_for_test_data'],
+        #     remove_chinese_stopwords=config.getboolean("preprocessing_text", "remove_chinese_stopwords"),
+        #     english_remove_stopwords=config.getboolean("preprocessing_text", "remove_english_stopwords"),
+        #     english_stem=config.getboolean("preprocessing_text", "english_stemming"),
+        #     english_stem_for_dict=config.getboolean("preprocessing_text", "zh_en_dict_stemming"))
         # cct_test.translate(
         #     corpus_file_path=config['test_data']['zh'],
         #     unknown_words_path=config['output_files_for_test_data']['unknown_words'],
@@ -105,25 +114,30 @@ class ParallelSentencePairsIdentifier(object):
         # print('\033[94m[Solr searching for training data]\033[0m')
         # cpsps_train = candidate_parallel_sentence_pairs_searcher.CandidateParallelSentencePairsFinder(
         #     index_file_path=config['output_files_for_training_data']['translated_corpus_path'],
-        #     index_file_for_solr_path=config['output_files_for_training_data']['corpus_for_solr'])
+        #     index_file_for_solr_path=config['output_files_for_training_data']['corpus_for_solr'],
+        #     english_remove_stopwords=config.getboolean("preprocessing_text", "remove_english_stopwords_in_source"),
+        #     english_stem=config.getboolean("preprocessing_text", "english_stemming_in_source"))
         # cpsps_train.search_corpus(
         #     searching_file_path=config['training_data']['en'],
         #     output_path=config['output_files_for_training_data']['source_target_and_potential_targets_path'],
         #     gold_standard_file_path=config['training_data']['gold'])
         #
-        # print('\033[94m[Solr searching for training data]\033[0m')
-        # cpsps_train = candidate_parallel_sentence_pairs_searcher.CandidateParallelSentencePairsFinder(
-        #     index_file_path=config['training_data']['en'],
-        #     index_file_for_solr_path=config['output_files_for_training_data']['corpus_for_solr'])
-        # cpsps_train.search_corpus(
-        #     searching_file_path=config['output_files_for_training_data']['translated_corpus_path'],
-        #     output_path=config['output_files_for_training_data']['source_target_and_potential_targets_path'],
-        #     gold_standard_file_path=config['training_data']['gold'])
+        # # # Reverse searching test
+        # # print('\033[94m[Solr searching for training data]\033[0m')
+        # # cpsps_train = candidate_parallel_sentence_pairs_searcher.CandidateParallelSentencePairsFinder(
+        # #     index_file_path=config['training_data']['en'],
+        # #     index_file_for_solr_path=config['output_files_for_training_data']['corpus_for_solr'])
+        # # cpsps_train.search_corpus(
+        # #     searching_file_path=config['output_files_for_training_data']['translated_corpus_path'],
+        # #     output_path=config['output_files_for_training_data']['source_target_and_potential_targets_path'],
+        # #     gold_standard_file_path=config['training_data']['gold'])
         #
         # print('\033[94m[Solr searching for test data]\033[0m')
         # cpsps_test = candidate_parallel_sentence_pairs_searcher.CandidateParallelSentencePairsFinder(
         #     index_file_path=config['output_files_for_test_data']['translated_corpus_path'],
-        #     index_file_for_solr_path=config['output_files_for_test_data']['corpus_for_solr'])
+        #     index_file_for_solr_path=config['output_files_for_test_data']['corpus_for_solr'],
+        #     english_remove_stopwords=config.getboolean("preprocessing_text", "remove_english_stopwords_in_source"),
+        #     english_stem=config.getboolean("preprocessing_text", "english_stemming_in_source"))
         # cpsps_test.search_corpus(
         #     searching_file_path=config['test_data']['en'],
         #     output_path=config['output_files_for_test_data']['source_target_and_potential_targets_path'])

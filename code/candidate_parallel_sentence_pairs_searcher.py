@@ -18,7 +18,7 @@ import visual_diagnostics
 
 class CandidateParallelSentencePairsFinder(object):
     def __init__(self, index_file_path, index_file_for_solr_path,
-                 english_remove_stopwords=False, english_stem=True):
+                 english_remove_stopwords, english_stem):
         # Change index_file line style from id\tsentence\n to id,sentence\n & add 'id,sentence\n' as the first line
         f = open(index_file_for_solr_path, 'w')
         f.write('id,sentence\n')
