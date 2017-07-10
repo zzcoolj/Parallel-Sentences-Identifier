@@ -34,7 +34,7 @@ class CandidateParallelSentencePairsClassifier(object):
     @staticmethod
     def preprocessing_data(source_target_and_potential_targets_path,
                            translated_target_information_path,
-                           translated_corpus_list_of_list_path,
+                           translated_corpus_for_overlap_path,
                            source_information_path,
                            output_folder_path_prefix,
                            use_extra_positive_information=True,
@@ -262,7 +262,7 @@ class CandidateParallelSentencePairsClassifier(object):
             if len(node_info_element) == 2:
                 node_info_element.append(get_english_sentence_length(node_info_element[1]))
 
-        translated_target_info_list_of_list = joblib.load(translated_corpus_list_of_list_path)
+        translated_target_info_list_of_list = joblib.load(translated_corpus_for_overlap_path)
 
         counter = 0
         for i in range(len(training_set)):
@@ -456,7 +456,7 @@ class CandidateParallelSentencePairsClassifier(object):
                    training_folder_path,
                    test_source_target_and_potential_targets_path,
                    test_translated_target_information_path,
-                   test_translated_corpus_list_of_list_path,
+                   test_translated_corpus_for_overlap_path,
                    test_source_information_path,
                    test_output_folder_path_prefix
                    ):
@@ -489,7 +489,7 @@ class CandidateParallelSentencePairsClassifier(object):
         test_features_scaled, test_training_set = self.preprocessing_data(
             source_target_and_potential_targets_path=test_source_target_and_potential_targets_path,
             translated_target_information_path=test_translated_target_information_path,
-            translated_corpus_list_of_list_path=test_translated_corpus_list_of_list_path,
+            translated_corpus_for_overlap_path=test_translated_corpus_for_overlap_path,
             source_information_path=test_source_information_path,
             output_folder_path_prefix=test_output_folder_path_prefix,
             use_extra_positive_information=False,

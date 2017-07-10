@@ -25,19 +25,20 @@ class ChineseCorpusTranslator(object):
             english_stem_for_dict=english_stem_for_dict)
 
     def translate(self, corpus_file_path, unknown_words_path,
-                  translated_corpus_path, translated_corpus_for_selecter_path, translated_corpus_list_of_list_path):
+                  translated_corpus_path, translated_corpus_for_selecter_path, translated_corpus_for_overlap_path):
         translated_target_file_dict = {}
         target_file_word_count_dict = {}
-        tokens_translations_dict = {}
+        tokens_translations_original_dict = {}
         all_unknown_words = set()
         corpus = common.read_two_columns_file_to_build_dictionary_type_specified(corpus_file_path, str, str)
 
         for identifier, sentence in corpus.items():
-            sentence_translation, unknown_words, tokens_translations = self.chinese_sentence_translator.translate(sentence)
+            sentence_translation, unknown_words, tokens_translations_original = \
+                self.chinese_sentence_translator.translate(sentence)
             all_unknown_words |= unknown_words
             translated_target_file_dict[identifier] = sentence_translation
             target_file_word_count_dict[identifier] = ChineseSentenceTranslator.get_chinese_sentence_length(sentence)
-            tokens_translations_dict[identifier] = tokens_translations
+            tokens_translations_original_dict[identifier] = tokens_translations_original
 
         # Write unknown words
         unknown_words_file = open(unknown_words_path, 'w')
@@ -51,7 +52,7 @@ class ChineseCorpusTranslator(object):
             # i.e. id,english_translation,original(Chinese)_sentence_length(count by words)
             f2.write('%s,%s,%d\n' % (identifier, sentence_translation, target_file_word_count_dict[identifier]))
         # Write tokens_translations_dict
-        joblib.dump(tokens_translations_dict, translated_corpus_list_of_list_path)
+        joblib.dump(tokens_translations_original_dict, translated_corpus_for_overlap_path)
 
 
 class ChineseSentenceTranslator(object):
@@ -64,9 +65,6 @@ class ChineseSentenceTranslator(object):
         self.english_stem = english_stem
         self.english_stem_for_dict = english_stem_for_dict
         self.chinese_tokenizer = ChineseSentenceTranslator.get_chinese_tokenizer(tokenizer_mode)
-
-        print(self.remove_chinese_stopwords)
-        exit()
 
         # Prepare resources for removing stop words and stem.
         if english_remove_stopwords:
@@ -95,6 +93,12 @@ class ChineseSentenceTranslator(object):
         chinese_tokens_list = self.__preprocess_chinese_sentence(chinese_tokens_list)
         # list of string, cause each word may have several translations
         tokens_translations = []
+        tokens_translations_original = []
+        '''
+        Difference between tokens_translations and tokens_translations_original:
+        tokens_translations is for Solr searching
+        tokens_translations_original is for overlap function in classifier
+        '''
         unknown_words = set()
 
         for chinese_token in chinese_tokens_list:
@@ -102,12 +106,15 @@ class ChineseSentenceTranslator(object):
             if chinese_token:
                 # Check whether the target word in dictionary
                 if chinese_token in self.zh_en_dict:
-                    token_translations = self.zh_en_dict[chinese_token]
-                    # TODO LATER interesting point & compare results
-                    if self.english_stem_for_dict:
-                        token_translations = list(set([self.stemmer.stem(e) for e in token_translations]))
+                    token_translations_original = self.zh_en_dict[chinese_token]
 
-                    tokens_translations.append(self.__process_token_translations(token_translations))
+                    if self.english_stem_for_dict:
+                        token_translations_original = \
+                            list(set([self.stemmer.stem(e) for e in token_translations_original]))
+
+                    tokens_translations_original.append(
+                        self.process_token_translations_for_original(token_translations_original))
+                    tokens_translations.append(self.__process_token_translations(token_translations_original))
                 else:
                     try:
                         # check whether the string can be encoded only with ASCII characters
@@ -116,17 +123,13 @@ class ChineseSentenceTranslator(object):
                     except UnicodeEncodeError:
                         unknown_words.add(chinese_token)
                     else:
+                        tokens_translations_original.append(
+                            self.process_token_translations_for_original([chinese_token]))
                         tokens_translations.append(self.__process_token_translations([chinese_token]))
 
         sentence_translation = ' '.join(tokens_translations)
 
-        # TODO Useless, after test OK => discard
-        # # Before loading csv file into Solr, remove ',' and '"'
-        # # Attention : same code in __init__ of CandidateParallelSentencePairsFinder
-        # sentence_translation = sentence_translation.replace(',', ' ')
-        # sentence_translation = sentence_translation.replace('"', ' ')
-
-        return sentence_translation, unknown_words, tokens_translations
+        return sentence_translation, unknown_words, tokens_translations_original
 
     def __preprocess_chinese_sentence(self, chinese_tokens_list):
         if self.remove_chinese_stopwords:
@@ -154,6 +157,17 @@ class ChineseSentenceTranslator(object):
                 unit = self.stemmer.stem(unit)
             processed_units.append(unit)
             # TODO LATER Use all potential translations so far, maybe only use the first one?
+        return ' '.join(processed_units)
+
+    @staticmethod
+    def process_token_translations_for_original(token_translations):
+        units = ' '.join(token_translations).translate(str.maketrans('', '', string.punctuation)).split(' ')
+        processed_units = []
+        for unit in units:
+            # TODO NOW useless? non-ASCII tokens have already been added to unknown_words
+            # replace consecutive non-ASCII characters with a space
+            unit = re.sub(r'[^\x00-\x7F]+', ' ', unit)
+            processed_units.append(unit)
         return ' '.join(processed_units)
 
     @staticmethod

@@ -91,8 +91,8 @@ class ParallelSentencePairsIdentifier(object):
         #     translated_corpus_path=config['output_files_for_training_data']['translated_corpus_path'],
         #     translated_corpus_for_selecter_path=
         #     config['output_files_for_training_data']['translated_corpus_for_selecter_path'],
-        #     translated_corpus_list_of_list_path=
-        #     config['output_files_for_training_data']['translated_corpus_list_of_list_path'])
+        #     translated_corpus_for_overlap_path=
+        #     config['output_files_for_training_data']['translated_corpus_for_overlap_path'])
         #
         # print('\033[94m[translating test target file]\033[0m')
         # cct_test = chinese_corpus_translator.ChineseCorpusTranslator(
@@ -107,8 +107,8 @@ class ParallelSentencePairsIdentifier(object):
         #     translated_corpus_path=config['output_files_for_test_data']['translated_corpus_path'],
         #     translated_corpus_for_selecter_path=
         #     config['output_files_for_test_data']['translated_corpus_for_selecter_path'],
-        #     translated_corpus_list_of_list_path=
-        #     config['output_files_for_test_data']['translated_corpus_list_of_list_path'])
+        #     translated_corpus_for_overlap_path=
+        #     config['output_files_for_test_data']['translated_corpus_for_overlap_path'])
 
         # # ------------------------------------- Searching --------------------------------------------------------------
         # print('\033[94m[Solr searching for training data]\033[0m')
@@ -150,8 +150,8 @@ class ParallelSentencePairsIdentifier(object):
             config['output_files_for_training_data']['source_target_and_potential_targets_path'],
             translated_target_information_path=
             config['output_files_for_training_data']['translated_corpus_for_selecter_path'],
-            translated_corpus_list_of_list_path=
-            config['output_files_for_training_data']['translated_corpus_list_of_list_path'],
+            translated_corpus_for_overlap_path=
+            config['output_files_for_training_data']['translated_corpus_for_overlap_path'],
             source_information_path=config['training_data']['en'],
             output_folder_path_prefix=config['output_files_for_training_data']['features_labels'])
 
@@ -163,8 +163,8 @@ class ParallelSentencePairsIdentifier(object):
             config['output_files_for_test_data']['source_target_and_potential_targets_path'],
             test_translated_target_information_path=
             config['output_files_for_test_data']['translated_corpus_for_selecter_path'],
-            test_translated_corpus_list_of_list_path=
-            config['output_files_for_test_data']['translated_corpus_list_of_list_path'],
+            test_translated_corpus_for_overlap_path=
+            config['output_files_for_test_data']['translated_corpus_for_overlap_path'],
             test_source_information_path=config['test_data']['en'],
             test_output_folder_path_prefix=config['output_files_for_test_data']['features_labels']
         )
