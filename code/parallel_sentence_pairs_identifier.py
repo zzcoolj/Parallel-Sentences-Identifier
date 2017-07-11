@@ -83,8 +83,9 @@ class ParallelSentencePairsIdentifier(object):
         #     remove_chinese_stopwords=config.getboolean("preprocessing_text", "remove_chinese_stopwords"),
         #     english_remove_stopwords=config.getboolean("preprocessing_text", "remove_english_stopwords"),
         #     english_stem=config.getboolean("preprocessing_text", "english_stemming"),
-        #     english_stem_for_dict=config.getboolean("preprocessing_text", "zh_en_dict_stemming"))
-        #
+        #     english_stem_for_dict=config.getboolean("preprocessing_text", "zh_en_dict_stemming"),
+        #     chinese_tokenizer_mode_for_solr=config['preprocessing_text']['chinese_tokenizer_mode_for_solr'],
+        #     chinese_tokenizer_mode_for_overlap=config['preprocessing_text']['chinese_tokenizer_mode_for_overlap'])
         # cct_train.translate(
         #     corpus_file_path=config['training_data']['zh'],
         #     unknown_words_path=config['output_files_for_training_data']['unknown_words'],
@@ -100,7 +101,9 @@ class ParallelSentencePairsIdentifier(object):
         #     remove_chinese_stopwords=config.getboolean("preprocessing_text", "remove_chinese_stopwords"),
         #     english_remove_stopwords=config.getboolean("preprocessing_text", "remove_english_stopwords"),
         #     english_stem=config.getboolean("preprocessing_text", "english_stemming"),
-        #     english_stem_for_dict=config.getboolean("preprocessing_text", "zh_en_dict_stemming"))
+        #     english_stem_for_dict=config.getboolean("preprocessing_text", "zh_en_dict_stemming"),
+        #     chinese_tokenizer_mode_for_solr=config['preprocessing_text']['chinese_tokenizer_mode_for_solr'],
+        #     chinese_tokenizer_mode_for_overlap=config['preprocessing_text']['chinese_tokenizer_mode_for_overlap'])
         # cct_test.translate(
         #     corpus_file_path=config['test_data']['zh'],
         #     unknown_words_path=config['output_files_for_test_data']['unknown_words'],

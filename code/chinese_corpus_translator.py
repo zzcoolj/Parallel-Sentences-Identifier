@@ -15,14 +15,16 @@ class ChineseCorpusTranslator(object):
     def __init__(self, zh_en_dict_path,
                  remove_chinese_stopwords, english_remove_stopwords,
                  english_stem, english_stem_for_dict,
-                 tokenizer_mode='full_mode',):
+                 chinese_tokenizer_mode_for_solr,
+                 chinese_tokenizer_mode_for_overlap):
         self.chinese_sentence_translator = ChineseSentenceTranslator(
             zh_en_dict_path=zh_en_dict_path,
-            tokenizer_mode=tokenizer_mode,
+            chinese_tokenizer_mode_for_solr=chinese_tokenizer_mode_for_solr,
             remove_chinese_stopwords=remove_chinese_stopwords,
             english_remove_stopwords=english_remove_stopwords,
             english_stem=english_stem,
-            english_stem_for_dict=english_stem_for_dict)
+            english_stem_for_dict=english_stem_for_dict,
+            chinese_tokenizer_mode_for_overlap=chinese_tokenizer_mode_for_overlap)
 
     def translate(self, corpus_file_path, unknown_words_path,
                   translated_corpus_path, translated_corpus_for_selecter_path, translated_corpus_for_overlap_path):
@@ -56,15 +58,18 @@ class ChineseCorpusTranslator(object):
 
 
 class ChineseSentenceTranslator(object):
-    def __init__(self, zh_en_dict_path, tokenizer_mode,
+    def __init__(self, zh_en_dict_path, chinese_tokenizer_mode_for_solr,
                  remove_chinese_stopwords, english_remove_stopwords,
-                 english_stem, english_stem_for_dict):
+                 english_stem, english_stem_for_dict, chinese_tokenizer_mode_for_overlap):
         self.zh_en_dict = common.read_n_columns_file_to_build_dict(zh_en_dict_path)
         self.remove_chinese_stopwords = remove_chinese_stopwords
         self.english_remove_stopwords = english_remove_stopwords
         self.english_stem = english_stem
         self.english_stem_for_dict = english_stem_for_dict
-        self.chinese_tokenizer = ChineseSentenceTranslator.get_chinese_tokenizer(tokenizer_mode)
+        self.chinese_tokenizer_mode_for_solr = \
+            ChineseSentenceTranslator.get_chinese_tokenizer(chinese_tokenizer_mode_for_solr)
+        self.chinese_tokenizer_mode_for_overlap = \
+            ChineseSentenceTranslator.get_chinese_tokenizer(chinese_tokenizer_mode_for_overlap)
 
         # Prepare resources for removing stop words and stem.
         if english_remove_stopwords:
@@ -88,8 +93,9 @@ class ChineseSentenceTranslator(object):
             self.chinese_stopwords = chinese_stpwds
 
     def translate(self, sentence):
+        # --------------------------------------- For Solr Searching ---------------------------------------------------
         # Get sentence segmentation
-        chinese_tokens_list = list(self.chinese_tokenizer(sentence))
+        chinese_tokens_list = list(self.chinese_tokenizer_mode_for_solr(sentence))
         chinese_tokens_list = self.__preprocess_chinese_sentence(chinese_tokens_list)
         # list of string, cause each word may have several translations
         tokens_translations = []
@@ -112,9 +118,41 @@ class ChineseSentenceTranslator(object):
                         token_translations_original = \
                             list(set([self.stemmer.stem(e) for e in token_translations_original]))
 
+                    # tokens_translations_original.append(
+                    #     self.process_token_translations_for_original(token_translations_original))
+                    tokens_translations.append(self.__process_token_translations(token_translations_original))
+                else:
+                    try:
+                        # check whether the string can be encoded only with ASCII characters
+                        # (which are Latin alphabet + some other characters)
+                        chinese_token.encode('ascii')
+                    except UnicodeEncodeError:
+                        unknown_words.add(chinese_token)
+                    else:
+                        # tokens_translations_original.append(
+                        #     self.process_token_translations_for_original([chinese_token]))
+                        tokens_translations.append(self.__process_token_translations([chinese_token]))
+
+        sentence_translation = ' '.join(tokens_translations)
+
+        # --------------------------------------- For Overlap Calculation ----------------------------------------------
+        # Get sentence segmentation
+        chinese_tokens_list = list(self.chinese_tokenizer_mode_for_overlap(sentence))
+        chinese_tokens_list = self.__preprocess_chinese_sentence(chinese_tokens_list)
+
+        for chinese_token in chinese_tokens_list:
+            # Avoid empty token (In full mode, token could be empty.)
+            if chinese_token:
+                # Check whether the target word in dictionary
+                if chinese_token in self.zh_en_dict:
+                    token_translations_original = self.zh_en_dict[chinese_token]
+
+                    if self.english_stem_for_dict:
+                        token_translations_original = \
+                            list(set([self.stemmer.stem(e) for e in token_translations_original]))
+
                     tokens_translations_original.append(
                         self.process_token_translations_for_original(token_translations_original))
-                    tokens_translations.append(self.__process_token_translations(token_translations_original))
                 else:
                     try:
                         # check whether the string can be encoded only with ASCII characters
@@ -125,9 +163,6 @@ class ChineseSentenceTranslator(object):
                     else:
                         tokens_translations_original.append(
                             self.process_token_translations_for_original([chinese_token]))
-                        tokens_translations.append(self.__process_token_translations([chinese_token]))
-
-        sentence_translation = ' '.join(tokens_translations)
 
         return sentence_translation, unknown_words, tokens_translations_original
 
@@ -182,11 +217,11 @@ class ChineseSentenceTranslator(object):
         def tokenizer_search_engine_mode(sentence):
             return jieba.cut_for_search(sentence)
 
-        if mode is 'full_mode':
+        if mode == 'full_mode':
             return tokenizer_full_mode
-        elif mode is 'accurate_mode':
+        elif mode == 'accurate_mode':
             return tokenizer_accurate_mode
-        elif mode is 'search_engine_mode':
+        elif mode == 'search_engine_mode':
             return tokenizer_search_engine_mode
         else:
             raise ValueError("Don't have this kind of tokenizer mode.")
