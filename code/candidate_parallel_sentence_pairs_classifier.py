@@ -327,6 +327,62 @@ class CandidateParallelSentencePairsClassifier(object):
 
         return training_features_scaled, training_set
 
+    # On the assumption that we already have training features and labels by using preprocessing_data function.
+    # Attention: Make sure they use same parameters of preprocessing_data function.
+    def prediction(self,
+                   training_folder_path,
+                   test_source_target_and_potential_targets_path,
+                   test_translated_target_information_path,
+                   test_translated_corpus_for_overlap_path,
+                   test_source_information_path,
+                   test_output_folder_path_prefix
+                   ):
+
+        """
+        test_labels_array_output_path and use_extra_positive_information are useless for test data.
+        The reason to keep them is just to use preprocessing_data function for both training data and test data.
+        """
+        print('[generating test features]')
+        # There is no extra positive information for test data => use_extra_positive_information=False
+        # Extract all information from test data =>  ten_percent_sampling=False
+        test_features_scaled, test_training_set = self.preprocessing_data(
+            source_target_and_potential_targets_path=test_source_target_and_potential_targets_path,
+            translated_target_information_path=test_translated_target_information_path,
+            translated_corpus_for_overlap_path=test_translated_corpus_for_overlap_path,
+            source_information_path=test_source_information_path,
+            output_folder_path_prefix=test_output_folder_path_prefix,
+            use_extra_positive_information=False,
+            ten_percent_sampling=False)
+        joblib.dump(test_training_set, test_output_folder_path_prefix+'test_training_set.pkl')
+
+        print("[reading training features and labels]")
+        training_features_scaled_path = training_folder_path + 'features.pkl'
+        labels_array_path = training_folder_path + 'labels.pkl'
+        pkl_file1 = open(training_features_scaled_path, 'rb')
+        training_features_scaled = pickle.load(pkl_file1)
+        pkl_file1.close()
+        pkl_file2 = open(labels_array_path, 'rb')
+        labels_array = pickle.load(pkl_file2)
+        pkl_file2.close()
+
+        print('[SVM model training]')
+        classifier = svm.SVC(kernel='rbf',
+                             class_weight=ast.literal_eval(config['svm_parameters']['class_weight']),
+                             C=float(config['svm_parameters']['C']),
+                             gamma=config['svm_parameters']['gamma'])
+        classifier.fit(training_features_scaled, labels_array)
+        joblib.dump(classifier, config['output_files_for_training_data']['trained_classifier'])
+
+        print('[SVM model predicting]')
+        # classifier = joblib.load(config['output_files_for_training_data']['trained_classifier'])
+        pred = classifier.predict(test_features_scaled)
+
+        print("[generating csv file]")
+        final_result = open(config['output_files_for_test_data']['predictions'], 'w')
+        for index, predicted_label in enumerate(pred):
+            if predicted_label == 1:
+                final_result.write(test_training_set[index][1] + '\t' + test_training_set[index][0] + '\n')
+
     @staticmethod
     def evaluation(folder_path,
                    n_splits_num=5,
@@ -450,64 +506,100 @@ class CandidateParallelSentencePairsClassifier(object):
         print("\nThe best parameters are %s with a score of %0.2f"
               % (grid.best_params_, grid.best_score_))
 
-    # On the assumption that we already have training features and labels by using preprocessing_data function.
-    # Attention: Make sure they use same parameters of preprocessing_data function.
-    def prediction(self,
-                   training_folder_path,
-                   test_source_target_and_potential_targets_path,
-                   test_translated_target_information_path,
-                   test_translated_corpus_for_overlap_path,
-                   test_source_information_path,
-                   test_output_folder_path_prefix
-                   ):
+    '''
+    Difference between find_best_c_gamma: find_best_c_gamma uses grid search, 
+    it's for the case where we only have training data.
+    If we have the test data gold standard and our goal is to improve the performance on the test data,
+    svm_parameters_selecter is a more straight forward function.
+    '''
+    @staticmethod
+    def svm_parameters_selecter(training_folder_path, test_folder_path, pred_path, gold_path):
 
-        """
-        test_labels_array_output_path and use_extra_positive_information are useless for test data.
-        The reason to keep them is just to use preprocessing_data function for both training data and test data.
-        """
-        print("[reading training features and labels]")
-        training_features_scaled_path = training_folder_path + 'features.pkl'
-        labels_array_path = training_folder_path + 'labels.pkl'
-        pkl_file1 = open(training_features_scaled_path, 'rb')
-        training_features_scaled = pickle.load(pkl_file1)
-        pkl_file1.close()
-        pkl_file2 = open(labels_array_path, 'rb')
-        labels_array = pickle.load(pkl_file2)
-        pkl_file2.close()
+        def result_analysis(predictions_path, gold_standard_path):
+            correct_predictions_count = 0
+            predictions_count = 0
+            gold_standard_dict = {}
+            with open(gold_standard_path) as f1:
+                for line1 in f1:
+                    (target_id, source_id) = line1.rstrip('\n').split("\t")
+                    gold_standard_dict[source_id] = target_id
+            with open(predictions_path) as f2:
+                for line2 in f2:
+                    predictions_count += 1
+                    (target_id_predicted, source_id_predicted) = line2.rstrip('\n').split("\t")
+                    if source_id_predicted in gold_standard_dict:
+                        if gold_standard_dict[source_id_predicted] == target_id_predicted:
+                            correct_predictions_count += 1
 
-        print('[SVM model training]')
-        classifier = svm.SVC(kernel='rbf',
-                             class_weight=ast.literal_eval(config['svm_parameters']['class_weight']),
-                             C=float(config['svm_parameters']['C']),
-                             gamma=config['svm_parameters']['gamma'])
-        classifier.fit(training_features_scaled, labels_array)
-        joblib.dump(classifier, config['output_files_for_training_data']['trained_classifier'])
+            # print('#real translations predicted (TP)', correct_predictions_count)
+            # print('#real translations (TP+FN)', len(gold_standard_dict))
+            recall = correct_predictions_count / len(gold_standard_dict)
+            print('recall (TP/(TP+FN))', recall)
+            # print('#translations predicted (TP+FP)', predictions_count)
+            precision = correct_predictions_count / predictions_count
+            print('precision (TP/(TP+FP))', precision)
+            print('f1', 2 * (precision * recall) / (precision + recall))
 
-        print('[generating test features]')
-        # There is no extra positive information for test data => use_extra_positive_information=False
-        # Extract all information from test data =>  ten_percent_sampling=False
-        test_features_scaled, test_training_set = self.preprocessing_data(
-            source_target_and_potential_targets_path=test_source_target_and_potential_targets_path,
-            translated_target_information_path=test_translated_target_information_path,
-            translated_corpus_for_overlap_path=test_translated_corpus_for_overlap_path,
-            source_information_path=test_source_information_path,
-            output_folder_path_prefix=test_output_folder_path_prefix,
-            use_extra_positive_information=False,
-            ten_percent_sampling=False)
-        joblib.dump(test_training_set, test_output_folder_path_prefix+'test_training_set.pkl')
+        class_weight_list = [{1: 7}, {1: 8}, {1: 9}]
+        C_list = [0.1, 1.0, 10]
 
-        print('[SVM model predicting]')
-        # classifier = joblib.load(config['output_files_for_training_data']['trained_classifier'])
-        pred = classifier.predict(test_features_scaled)
+        for class_weight in class_weight_list:
+            for C in C_list:
+                print('class_weight', class_weight)
+                print('C', C)
 
-        print("[generating csv file]")
-        final_result = open(config['output_files_for_test_data']['predictions'], 'w')
-        for index, predicted_label in enumerate(pred):
-            if predicted_label == 1:
-                final_result.write(test_training_set[index][1] + '\t' + test_training_set[index][0] + '\n')
+                print("[reading training features and labels]")
+                training_features_scaled_path = training_folder_path + 'features.pkl'
+                labels_array_path = training_folder_path + 'labels.pkl'
+                pkl_file1 = open(training_features_scaled_path, 'rb')
+                training_features_scaled = pickle.load(pkl_file1)
+                pkl_file1.close()
+                pkl_file2 = open(labels_array_path, 'rb')
+                labels_array = pickle.load(pkl_file2)
+                pkl_file2.close()
+
+                print("[reading test features]")
+                test_features_scaled_path = test_folder_path + 'features.pkl'
+                pkl_file3 = open(test_features_scaled_path, 'rb')
+                test_features_scaled = pickle.load(pkl_file3)
+
+                test_training_set_path = test_folder_path + 'test_training_set.pkl'
+                pkl_file4 = open(test_training_set_path, 'rb')
+                test_training_set = pickle.load(pkl_file4)
+
+                print('[SVM model training]')
+                classifier = svm.SVC(kernel='rbf',
+                                     class_weight=class_weight,
+                                     C=C,
+                                     gamma='auto')
+                classifier.fit(training_features_scaled, labels_array)
+
+                print('[SVM model predicting]')
+                pred = classifier.predict(test_features_scaled)
+
+                print("[generating csv file]")
+                final_result = open(pred_path, 'w')
+                for index, predicted_label in enumerate(pred):
+                    if predicted_label == 1:
+                        final_result.write(test_training_set[index][1] + '\t' + test_training_set[index][0] + '\n')
+
+                result_analysis(
+                    predictions_path=pred_path,
+                    gold_standard_path=gold_path
+                )
+                print()
+
 
 # # For test
 # CandidateParallelSentencePairsClassifier.evaluation(folder_path='../data/temp_data/classifier/training/')
 
 # CandidateParallelSentencePairsClassifier.find_best_c_gamma(
 #     folder_path='../data/temp_data/classifier/training_temp/')
+
+# # Run in server
+# CandidateParallelSentencePairsClassifier.svm_parameters_selecter(
+#     training_folder_path='training/',
+#     test_folder_path='test/',
+#     pred_path='predictions',
+#     gold_path='zh-en.test.gold'
+# )

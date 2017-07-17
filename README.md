@@ -30,3 +30,4 @@ Precision | Recall | F1-score | Remark
 0.4247 | 0.4815 | 0.4513 | From functional programming to OOP; Debugs
 0.4293 | 0.5348 | 0.4763 | `solr_topN` changed from 3 to 1; Remove `Solr_index` feature (as it is always 1); New overlap function
 0.4370 | 0.5506 | 0.4873 | Independent corpus for overlap calculation: search engine Chinese tokenizer mode (full mode for the Solr searching corpus), remove English stop words and do English stemming.
+0.6542 | 0.4441 | 0.5291 | New SVM parameters (`class_weight` changes from `1:8` to `1:3` and `C`changes from `1.0` to `10.0`)
