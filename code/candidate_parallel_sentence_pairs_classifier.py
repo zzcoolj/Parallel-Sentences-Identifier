@@ -342,39 +342,41 @@ class CandidateParallelSentencePairsClassifier(object):
         test_labels_array_output_path and use_extra_positive_information are useless for test data.
         The reason to keep them is just to use preprocessing_data function for both training data and test data.
         """
-        print('[generating test features]')
-        # There is no extra positive information for test data => use_extra_positive_information=False
-        # Extract all information from test data =>  ten_percent_sampling=False
-        test_features_scaled, test_training_set = self.preprocessing_data(
-            source_target_and_potential_targets_path=test_source_target_and_potential_targets_path,
-            translated_target_information_path=test_translated_target_information_path,
-            translated_corpus_for_overlap_path=test_translated_corpus_for_overlap_path,
-            source_information_path=test_source_information_path,
-            output_folder_path_prefix=test_output_folder_path_prefix,
-            use_extra_positive_information=False,
-            ten_percent_sampling=False)
-        joblib.dump(test_training_set, test_output_folder_path_prefix+'test_training_set.pkl')
-
-        print("[reading training features and labels]")
-        training_features_scaled_path = training_folder_path + 'features.pkl'
-        labels_array_path = training_folder_path + 'labels.pkl'
-        pkl_file1 = open(training_features_scaled_path, 'rb')
-        training_features_scaled = pickle.load(pkl_file1)
-        pkl_file1.close()
-        pkl_file2 = open(labels_array_path, 'rb')
-        labels_array = pickle.load(pkl_file2)
-        pkl_file2.close()
-
-        print('[SVM model training]')
-        classifier = svm.SVC(kernel='rbf',
-                             class_weight=ast.literal_eval(config['svm_parameters']['class_weight']),
-                             C=float(config['svm_parameters']['C']),
-                             gamma=config['svm_parameters']['gamma'])
-        classifier.fit(training_features_scaled, labels_array)
-        joblib.dump(classifier, config['output_files_for_training_data']['trained_classifier'])
+        # print('[generating test features]')
+        # # There is no extra positive information for test data => use_extra_positive_information=False
+        # # Extract all information from test data =>  ten_percent_sampling=False
+        # test_features_scaled, test_training_set = self.preprocessing_data(
+        #     source_target_and_potential_targets_path=test_source_target_and_potential_targets_path,
+        #     translated_target_information_path=test_translated_target_information_path,
+        #     translated_corpus_for_overlap_path=test_translated_corpus_for_overlap_path,
+        #     source_information_path=test_source_information_path,
+        #     output_folder_path_prefix=test_output_folder_path_prefix,
+        #     use_extra_positive_information=False,
+        #     ten_percent_sampling=False)
+        # joblib.dump(test_training_set, test_output_folder_path_prefix+'test_training_set.pkl')
+        #
+        # print("[reading training features and labels]")
+        # training_features_scaled_path = training_folder_path + 'features.pkl'
+        # labels_array_path = training_folder_path + 'labels.pkl'
+        # pkl_file1 = open(training_features_scaled_path, 'rb')
+        # training_features_scaled = pickle.load(pkl_file1)
+        # pkl_file1.close()
+        # pkl_file2 = open(labels_array_path, 'rb')
+        # labels_array = pickle.load(pkl_file2)
+        # pkl_file2.close()
+        #
+        # print('[SVM model training]')
+        # classifier = svm.SVC(kernel='rbf',
+        #                      class_weight=ast.literal_eval(config['svm_parameters']['class_weight']),
+        #                      C=float(config['svm_parameters']['C']),
+        #                      gamma=config['svm_parameters']['gamma'])
+        # classifier.fit(training_features_scaled, labels_array)
+        # joblib.dump(classifier, config['output_files_for_training_data']['trained_classifier'])
 
         print('[SVM model predicting]')
-        # classifier = joblib.load(config['output_files_for_training_data']['trained_classifier'])
+        classifier = joblib.load(config['output_files_for_training_data']['trained_classifier'])
+        test_training_set = joblib.load(test_output_folder_path_prefix+'test_training_set.pkl')
+        test_features_scaled = joblib.load(test_output_folder_path_prefix+'features.pkl')
         pred = classifier.predict(test_features_scaled)
 
         print("[generating csv file]")

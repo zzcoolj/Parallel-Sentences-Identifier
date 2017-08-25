@@ -2,41 +2,65 @@ import chinese_corpus_translator
 import candidate_parallel_sentence_pairs_searcher
 import candidate_parallel_sentence_pairs_classifier
 import configparser
+import sys
 
 config = configparser.ConfigParser()
 config.read('config.ini')
 
+sys.path.insert(0, '../../common/')
+import common
 
 class ParallelSentencePairsIdentifier(object):
     def __init__(self):
         pass
 
     @staticmethod
-    def result_analysis(predictions_path, gold_standard_path=None):
-        if gold_standard_path is not None:
-            correct_predictions_count = 0
-            predictions_count = 0
-            gold_standard_dict = {}
-            with open(gold_standard_path) as f1:
-                for line1 in f1:
-                    (target_id, source_id) = line1.rstrip('\n').split("\t")
-                    gold_standard_dict[source_id] = target_id
-            with open(predictions_path) as f2:
-                for line2 in f2:
-                    predictions_count += 1
-                    (target_id_predicted, source_id_predicted) = line2.rstrip('\n').split("\t")
-                    if source_id_predicted in gold_standard_dict:
-                        if gold_standard_dict[source_id_predicted] == target_id_predicted:
-                            correct_predictions_count += 1
+    def result_analysis(predictions_path, gold_standard_path, en_path, zh_path, write_false_positive=False):
+        correct_predictions_count = 0
+        predictions_count = 0
+        gold_standard_dict = {}
 
-            print('#real translations predicted (TP)', correct_predictions_count)
-            print('#real translations (TP+FN)', len(gold_standard_dict))
-            recall = correct_predictions_count / len(gold_standard_dict)
-            print('recall (TP/(TP+FN))', recall)
-            print('#translations predicted (TP+FP)', predictions_count)
-            precision = correct_predictions_count / predictions_count
-            print('precision (TP/(TP+FP))', precision)
-            print('f1', 2 * (precision * recall) / (precision + recall))
+        # TODO path go to config
+        if write_false_positive:
+            en_file = common.read_two_columns_file_to_build_dictionary_type_specified(en_path, str, str)
+            zh_file = common.read_two_columns_file_to_build_dictionary_type_specified(zh_path, str, str)
+            count_source_in_gold = 0
+            count_source_not_in_gold = 0
+
+        with open(gold_standard_path) as f1:
+            for line1 in f1:
+                (target_id, source_id) = line1.rstrip('\n').split("\t")
+                gold_standard_dict[source_id] = target_id
+
+        with open(predictions_path) as f2:
+            false_positive = open(config['output_files_for_test_data']['false_positive'], 'w')
+            for line2 in f2:
+                predictions_count += 1
+                (target_id_predicted, source_id_predicted) = line2.rstrip('\n').split("\t")
+                if source_id_predicted in gold_standard_dict:
+                    if gold_standard_dict[source_id_predicted] == target_id_predicted:
+                        correct_predictions_count += 1
+                    elif write_false_positive:
+                        false_positive.write('ingold\n' + source_id_predicted+ '\n' +en_file[source_id_predicted] + '\n'
+                                             +target_id_predicted+'\n'+ zh_file[target_id_predicted] + '\n\n')
+                        count_source_in_gold += 1
+                elif write_false_positive:
+                    false_positive.write(source_id_predicted+ '\n' +en_file[source_id_predicted] + '\n'
+                                             +target_id_predicted+'\n'+ zh_file[target_id_predicted] + '\n\n')
+                    count_source_not_in_gold += 1
+
+        if write_false_positive:
+            false_positive.write('count_source_in_gold' + str(count_source_in_gold))
+            false_positive.write('count_source_not_in_gold' + str(count_source_not_in_gold))
+
+        print('#real translations predicted (TP)', correct_predictions_count)
+        print('#real translations (TP+FN)', len(gold_standard_dict))
+        recall = correct_predictions_count / len(gold_standard_dict)
+        print('recall (TP/(TP+FN))', recall)
+        print('#translations predicted (TP+FP)', predictions_count)
+        precision = correct_predictions_count / predictions_count
+        print('precision (TP/(TP+FP))', precision)
+        print('f1', 2 * (precision * recall) / (precision + recall))
 
     @staticmethod
     def intersection(dict1_path, dict2_path, pred_path):
@@ -146,17 +170,17 @@ class ParallelSentencePairsIdentifier(object):
         #     output_path=config['output_files_for_test_data']['source_target_and_potential_targets_path'])
 
         # ------------------------------------- Classifying ------------------------------------------------------------
-        print('\033[94m[SVM training]\033[0m')
-        cpspc_train = candidate_parallel_sentence_pairs_classifier.CandidateParallelSentencePairsClassifier()
-        cpspc_train.preprocessing_data(
-            source_target_and_potential_targets_path=
-            config['output_files_for_training_data']['source_target_and_potential_targets_path'],
-            translated_target_information_path=
-            config['output_files_for_training_data']['translated_corpus_for_selecter_path'],
-            translated_corpus_for_overlap_path=
-            config['output_files_for_training_data']['translated_corpus_for_overlap_path'],
-            source_information_path=config['training_data']['en'],
-            output_folder_path_prefix=config['output_files_for_training_data']['features_labels'])
+        # print('\033[94m[SVM training]\033[0m')
+        # cpspc_train = candidate_parallel_sentence_pairs_classifier.CandidateParallelSentencePairsClassifier()
+        # cpspc_train.preprocessing_data(
+        #     source_target_and_potential_targets_path=
+        #     config['output_files_for_training_data']['source_target_and_potential_targets_path'],
+        #     translated_target_information_path=
+        #     config['output_files_for_training_data']['translated_corpus_for_selecter_path'],
+        #     translated_corpus_for_overlap_path=
+        #     config['output_files_for_training_data']['translated_corpus_for_overlap_path'],
+        #     source_information_path=config['training_data']['en'],
+        #     output_folder_path_prefix=config['output_files_for_training_data']['features_labels'])
 
         print('\033[94m[SVM predicting]\033[0m')
         cpspc_test = candidate_parallel_sentence_pairs_classifier.CandidateParallelSentencePairsClassifier()
@@ -172,11 +196,15 @@ class ParallelSentencePairsIdentifier(object):
             test_output_folder_path_prefix=config['output_files_for_test_data']['features_labels']
         )
 
-# Whole system test (Test run 1)
-ParallelSentencePairsIdentifier.all()
+
+# # Whole system test (Test run 1)
+# ParallelSentencePairsIdentifier.all()
 ParallelSentencePairsIdentifier.result_analysis(
     predictions_path=config['output_files_for_test_data']['predictions'],
-    gold_standard_path='../data/bucc2017/test_data/zh-en.test.gold')
+    gold_standard_path=config['test_data']['gold'],
+    en_path=config['test_data']['en'],
+    zh_path=config['test_data']['zh'],
+    write_false_positive=True)
 
 # # Test run 2
 # ParallelSentencePairsIdentifier.result_analysis(
