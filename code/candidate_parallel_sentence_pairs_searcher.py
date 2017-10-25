@@ -299,7 +299,7 @@ class CandidateParallelSentencePairsFinder(object):
                 # precision = "{0:.5f}%".format(true_count / gold_standard_num * 100)
                 precision = true_count / gold_standard_num * 100
                 success_rows_dict[str(i + 1)] = precision
-            common.write_dict_to_file(config['output_files_for_training_data']['success'], success_rows_dict, 'str')
+            common.write_dict_to_file(config['output_files_for_training_data']['success'], success_rows_dict, 'int')
             visual_diagnostics.plot_dict(config['output_files_for_training_data']['success'])
 
             # Compare two Solr success rates
@@ -374,7 +374,6 @@ class CandidateParallelSentencePairsFinder(object):
                             pred.write(value_id + '\t' + key_id + '\n')
 
 
-
 # # Corpus searching test
 # cpspf = CandidateParallelSentencePairsFinder(index_file_path='/Users/zzcoolj/Code/bucc2017/data/temp_data/'
 #                                                              'translated_target_file_test_full_mode_for_solr.csv')
@@ -409,3 +408,6 @@ class CandidateParallelSentencePairsFinder(object):
 #     pred_path='../data/predictions_intersection',
 #     intersection_size=1
 # )
+
+
+# TODO LATER change searching mode (tf-idf)
